@@ -231,6 +231,13 @@ export default function ReportPage() {
         }
     };
 
+    // Attach stream to video element when stream or showCamera changes
+    useEffect(() => {
+        if (showCamera && stream && videoRef.current) {
+            videoRef.current.srcObject = stream;
+        }
+    }, [showCamera, stream]);
+
     // Start camera
     const startCamera = async () => {
         try {
@@ -240,10 +247,6 @@ export default function ReportPage() {
             });
             setStream(mediaStream);
             setShowCamera(true);
-
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
         } catch (err) {
             console.error('Camera error:', err);
             // Fall back to file input
@@ -480,15 +483,7 @@ export default function ReportPage() {
                             </button>
                         </div>
 
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*,video/*"
-                            capture="environment"
-                            onChange={handleFileSelect}
-                            className={styles.hiddenInput}
-                            multiple
-                        />
+                        {/* File input moved to bottom of page for shared access */}
                     </div>
                 ) : (
                     <div className={styles.detailsStep}>
@@ -665,6 +660,7 @@ export default function ReportPage() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/*,video/*"
+                capture="environment"
                 onChange={handleFileSelect}
                 className={styles.hiddenInput}
                 multiple
