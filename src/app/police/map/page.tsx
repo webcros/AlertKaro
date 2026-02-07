@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -45,21 +45,23 @@ export default function PoliceMapPage() {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
+    const markerClusterRef = useRef<any>(null);
 
-    const [profile, setProfile] = useState<{ full_name: string; role: string } | null>(null);
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [mapLoaded, setMapLoaded] = useState(false);
-    const [statusFilter, setStatusFilter] = useState<string>('unresolved');
+    const [statusFilter, setStatusFilter] = useState<string[]>(['submitted', 'in_review', 'action_taken']);
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
+    const [showHighPriorityOnly, setShowHighPriorityOnly] = useState(false);
     const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+    const [showFilters, setShowFilters] = useState(true);
 
-    // Load Leaflet CSS and JS
+    // Load Leaflet CSS and JS with MarkerCluster
     useEffect(() => {
         const loadLeaflet = async () => {
             // Add Leaflet CSS
-            if (!document.querySelector('link[href*="leaflet"]')) {
+            if (!document.querySelector('link[href*="leaflet.css"]')) {
                 const link = document.createElement('link');
                 link.rel = 'stylesheet';
                 link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
@@ -68,13 +70,32 @@ export default function PoliceMapPage() {
                 document.head.appendChild(link);
             }
 
+            // Add MarkerCluster CSS
+            if (!document.querySelector('link[href*="MarkerCluster"]')) {
+                const clusterCss = document.createElement('link');
+                clusterCss.rel = 'stylesheet';
+                clusterCss.href = 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css';
+                document.head.appendChild(clusterCss);
+
+                const clusterDefaultCss = document.createElement('link');
+                clusterDefaultCss.rel = 'stylesheet';
+                clusterDefaultCss.href = 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css';
+                document.head.appendChild(clusterDefaultCss);
+            }
+
             // Add Leaflet JS
             if (!window.L) {
                 const script = document.createElement('script');
                 script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
                 script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
                 script.crossOrigin = '';
-                script.onload = () => setMapLoaded(true);
+                script.onload = () => {
+                    // Load MarkerCluster after Leaflet
+                    const clusterScript = document.createElement('script');
+                    clusterScript.src = 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js';
+                    clusterScript.onload = () => setMapLoaded(true);
+                    document.head.appendChild(clusterScript);
+                };
                 document.head.appendChild(script);
             } else {
                 setMapLoaded(true);
@@ -84,34 +105,12 @@ export default function PoliceMapPage() {
         loadLeaflet();
     }, []);
 
+    // Initial data load
     useEffect(() => {
-        async function checkAccess() {
-            const { data: { user } } = await supabase.auth.getUser();
+        loadData();
+    }, []);
 
-            if (!user) {
-                router.push('/login');
-                return;
-            }
-
-            const { data: profileData } = await supabase
-                .from('profiles')
-                .select('full_name, role')
-                .eq('id', user.id)
-                .single();
-
-            if (!profileData || !['police', 'admin'].includes(profileData.role)) {
-                router.push('/dashboard');
-                return;
-            }
-
-            setProfile(profileData);
-            loadData();
-        }
-
-        checkAccess();
-    }, [supabase, router]);
-
-    async function loadData() {
+    const loadData = useCallback(async () => {
         try {
             // Load categories
             const { data: catData } = await supabase
@@ -141,14 +140,7 @@ export default function PoliceMapPage() {
                 .not('longitude', 'is', null)
                 .order('created_at', { ascending: false });
 
-            // Apply status filter
-            if (statusFilter === 'unresolved') {
-                query = query.neq('status', 'resolved');
-            } else if (statusFilter !== 'all') {
-                query = query.eq('status', statusFilter);
-            }
-
-            // Apply category filter
+            // Apply category filter at query level
             if (categoryFilter !== 'all') {
                 query = query.eq('category_id', categoryFilter);
             }
@@ -164,14 +156,19 @@ export default function PoliceMapPage() {
         } finally {
             setLoading(false);
         }
-    }
+    }, [supabase, categoryFilter]);
 
-    // Reload data when filters change
+    // Reload data when category filter changes
     useEffect(() => {
-        if (profile) {
-            loadData();
-        }
-    }, [statusFilter, categoryFilter]);
+        loadData();
+    }, [categoryFilter, loadData]);
+
+    // Filter incidents locally for status and priority
+    const filteredIncidents = incidents.filter(incident => {
+        const matchesStatus = statusFilter.length === 0 || statusFilter.includes(incident.status);
+        const matchesPriority = !showHighPriorityOnly || ['urgent', 'high'].includes(incident.priority);
+        return matchesStatus && matchesPriority;
+    });
 
     // Initialize map when Leaflet is loaded and data is ready
     useEffect(() => {
@@ -183,26 +180,64 @@ export default function PoliceMapPage() {
             return;
         }
 
-        // Initialize map centered on India
-        const map = window.L.map(mapRef.current).setView([20.5937, 78.9629], 5);
+        // Initialize map centered on India with dark theme
+        const map = window.L.map(mapRef.current, {
+            zoomControl: false // We'll add custom zoom control
+        }).setView([20.5937, 78.9629], 5);
 
-        // Add tile layer (OpenStreetMap)
-        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19,
+        // Add zoom control to bottom right
+        window.L.control.zoom({
+            position: 'bottomright'
+        }).addTo(map);
+
+        // Add dark tile layer (CartoDB Dark Matter)
+        window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20,
         }).addTo(map);
 
         mapInstanceRef.current = map;
+
+        // Initialize marker cluster group
+        if ((window.L as any).markerClusterGroup) {
+            markerClusterRef.current = (window.L as any).markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 50,
+                spiderfyOnMaxZoom: true,
+                showCoverageOnHover: false,
+                iconCreateFunction: function (cluster: any) {
+                    const count = cluster.getChildCount();
+                    let size = 'small';
+                    let dimension = 40;
+                    if (count > 10) {
+                        size = 'medium';
+                        dimension = 50;
+                    }
+                    if (count > 50) {
+                        size = 'large';
+                        dimension = 60;
+                    }
+                    return window.L.divIcon({
+                        html: `<div class="${styles.clusterIcon} ${styles['cluster' + size.charAt(0).toUpperCase() + size.slice(1)]}"><span>${count}</span></div>`,
+                        className: styles.markerCluster,
+                        iconSize: window.L.point(dimension, dimension)
+                    });
+                }
+            });
+            map.addLayer(markerClusterRef.current);
+        }
+
         updateMarkers();
 
     }, [mapLoaded, loading]);
 
-    // Update markers when incidents change
+    // Update markers when filtered incidents change
     useEffect(() => {
         if (mapInstanceRef.current && mapLoaded) {
             updateMarkers();
         }
-    }, [incidents]);
+    }, [filteredIncidents, mapLoaded]);
 
     function updateMarkers() {
         const L = window.L;
@@ -210,64 +245,52 @@ export default function PoliceMapPage() {
         if (!map || !L) return;
 
         // Clear existing markers
-        markersRef.current.forEach(marker => map.removeLayer(marker));
-        markersRef.current = [];
+        if (markerClusterRef.current) {
+            markerClusterRef.current.clearLayers();
+        } else {
+            markersRef.current.forEach(marker => map.removeLayer(marker));
+            markersRef.current = [];
+        }
 
         // Add new markers
         const bounds: [number, number][] = [];
 
-        incidents.forEach((incident) => {
+        filteredIncidents.forEach((incident) => {
             if (incident.latitude && incident.longitude) {
                 bounds.push([incident.latitude, incident.longitude]);
 
                 // Create custom icon based on status
                 const color = getStatusColor(incident.status);
+                const isHighPriority = ['urgent', 'high'].includes(incident.priority);
+                const markerSize = isHighPriority ? 44 : 36;
+
                 const icon = L.divIcon({
                     className: styles.customMarker,
                     html: `
-                        <div class="${styles.markerPin}" style="--marker-color: ${color}">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <div class="${styles.markerPin} ${isHighPriority ? styles.highPriority : ''}" style="--marker-color: ${color}">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="${isHighPriority ? 22 : 18}" height="${isHighPriority ? 22 : 18}">
                                 <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                             </svg>
+                            ${isHighPriority ? '<span class="' + styles.priorityPulse + '"></span>' : ''}
                         </div>
                     `,
-                    iconSize: [40, 50],
-                    iconAnchor: [20, 50],
-                    popupAnchor: [0, -50]
+                    iconSize: [markerSize, markerSize + 10],
+                    iconAnchor: [markerSize / 2, markerSize + 10],
+                    popupAnchor: [0, -(markerSize + 10)]
                 });
 
-                const marker = L.marker([incident.latitude, incident.longitude], { icon })
-                    .addTo(map);
-
-                // Create popup content
-                const popupContent = `
-                    <div class="${styles.popupContent}">
-                        <div class="${styles.popupHeader}">
-                            <span class="${styles.popupTrackingId}">#${incident.tracking_id}</span>
-                            <span class="${styles.popupStatus}" style="background: ${getStatusBg(incident.status)}; color: ${color}">
-                                ${getStatusLabel(incident.status)}
-                            </span>
-                        </div>
-                        <h3 class="${styles.popupTitle}">${incident.title}</h3>
-                        <p class="${styles.popupMeta}">
-                            <span style="color: ${incident.category?.color}">${incident.category?.name || 'Unknown'}</span>
-                            <span>• ${formatTimeAgo(incident.created_at)}</span>
-                        </p>
-                        ${incident.address ? `<p class="${styles.popupAddress}">${incident.address.slice(0, 80)}${incident.address.length > 80 ? '...' : ''}</p>` : ''}
-                        <a href="/police/incident/${incident.id}" class="${styles.popupLink}">View Details →</a>
-                    </div>
-                `;
-
-                marker.bindPopup(popupContent, {
-                    maxWidth: 300,
-                    className: styles.customPopup
-                });
+                const marker = L.marker([incident.latitude, incident.longitude], { icon });
 
                 marker.on('click', () => {
                     setSelectedIncident(incident);
                 });
 
-                markersRef.current.push(marker);
+                if (markerClusterRef.current) {
+                    markerClusterRef.current.addLayer(marker);
+                } else {
+                    marker.addTo(map);
+                    markersRef.current.push(marker);
+                }
             }
         });
 
@@ -279,29 +302,29 @@ export default function PoliceMapPage() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'submitted': return '#D32F2F';
-            case 'in_review': return '#F57C00';
-            case 'action_taken': return '#1976D2';
-            case 'resolved': return '#388E3C';
-            default: return '#757575';
+            case 'submitted': return '#dc2626';
+            case 'in_review': return '#d97706';
+            case 'action_taken': return '#2563eb';
+            case 'resolved': return '#059669';
+            default: return '#64748b';
         }
     };
 
     const getStatusBg = (status: string) => {
         switch (status) {
-            case 'submitted': return '#FFEBEE';
-            case 'in_review': return '#FFF3E0';
-            case 'action_taken': return '#E3F2FD';
-            case 'resolved': return '#E8F5E9';
-            default: return '#F5F5F5';
+            case 'submitted': return '#fef2f2';
+            case 'in_review': return '#fffbeb';
+            case 'action_taken': return '#eff6ff';
+            case 'resolved': return '#ecfdf5';
+            default: return '#f8fafc';
         }
     };
 
     const getStatusLabel = (status: string) => {
         switch (status) {
-            case 'submitted': return 'New';
+            case 'submitted': return 'Pending';
             case 'in_review': return 'In Review';
-            case 'action_taken': return 'Action Taken';
+            case 'action_taken': return 'In Progress';
             case 'resolved': return 'Resolved';
             default: return status;
         }
@@ -322,14 +345,28 @@ export default function PoliceMapPage() {
         return then.toLocaleDateString();
     };
 
-    const handleSignOut = async () => {
-        await supabase.auth.signOut();
-        router.push('/login');
+    const toggleStatusFilter = (status: string) => {
+        setStatusFilter(prev =>
+            prev.includes(status)
+                ? prev.filter(s => s !== status)
+                : [...prev, status]
+        );
+    };
+
+    const centerOnIncidents = () => {
+        if (mapInstanceRef.current && filteredIncidents.length > 0) {
+            const bounds = filteredIncidents
+                .filter(i => i.latitude && i.longitude)
+                .map(i => [i.latitude!, i.longitude!] as [number, number]);
+            if (bounds.length > 0) {
+                mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+            }
+        }
     };
 
     if (loading || !mapLoaded) {
         return (
-            <div className={styles.loading}>
+            <div className={styles.contentLoading}>
                 <div className={styles.spinner}></div>
                 <p>Loading map...</p>
             </div>
@@ -337,87 +374,68 @@ export default function PoliceMapPage() {
     }
 
     return (
-        <div className={styles.page}>
-            {/* Sidebar */}
-            <aside className={styles.sidebar}>
-                <div className={styles.logo}>
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-                    </svg>
-                    <span>AlertKaro</span>
+        <>
+            {/* Map Container */}
+            <div className={styles.mapWrapper}>
+                <div ref={mapRef} className={styles.map}></div>
+
+                {/* Map Header Overlay */}
+                <div className={styles.mapHeader}>
+                    <div className={styles.mapTitle}>
+                        <h1>Incident Map</h1>
+                        <span className={styles.incidentCount}>{filteredIncidents.length} incidents</span>
+                    </div>
+                    <div className={styles.mapActions}>
+                        <button
+                            className={styles.mapActionBtn}
+                            onClick={centerOnIncidents}
+                            title="Center on incidents"
+                        >
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                                <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" />
+                            </svg>
+                        </button>
+                        <button
+                            className={`${styles.mapActionBtn} ${showFilters ? styles.active : ''}`}
+                            onClick={() => setShowFilters(!showFilters)}
+                            title="Toggle filters"
+                        >
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                                <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
-                <nav className={styles.nav}>
-                    <Link href="/police" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
-                        </svg>
-                        Dashboard
-                    </Link>
-                    <Link href="/police/incidents" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6z" />
-                        </svg>
-                        All Incidents
-                    </Link>
-                    <Link href="/police/map" className={`${styles.navLink} ${styles.active}`}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        Map View
-                    </Link>
-                    <Link href="/police/analytics" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
-                        </svg>
-                        Analytics
-                    </Link>
-                </nav>
+                {/* Filter Panel */}
+                {showFilters && (
+                    <div className={styles.filterPanel}>
+                        <h3>Filters</h3>
 
-                <div className={styles.sidebarFooter}>
-                    <div className={styles.userInfo}>
-                        <div className={styles.userAvatar}>
-                            {profile?.full_name?.charAt(0)}
+                        <div className={styles.filterSection}>
+                            <label>Status</label>
+                            <div className={styles.statusFilters}>
+                                {[
+                                    { value: 'submitted', label: 'Pending', color: '#dc2626' },
+                                    { value: 'in_review', label: 'In Review', color: '#d97706' },
+                                    { value: 'action_taken', label: 'In Progress', color: '#2563eb' },
+                                    { value: 'resolved', label: 'Resolved', color: '#059669' },
+                                ].map(status => (
+                                    <button
+                                        key={status.value}
+                                        className={`${styles.statusChip} ${statusFilter.includes(status.value) ? styles.active : ''}`}
+                                        onClick={() => toggleStatusFilter(status.value)}
+                                        style={{ '--chip-color': status.color } as React.CSSProperties}
+                                    >
+                                        <span className={styles.chipDot}></span>
+                                        {status.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                        <div>
-                            <p className={styles.userName}>{profile?.full_name}</p>
-                            <p className={styles.userRole}>{profile?.role}</p>
-                        </div>
-                    </div>
-                    <button onClick={handleSignOut} className={styles.signOutBtn}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
-                        </svg>
-                    </button>
-                </div>
-            </aside>
 
-            {/* Main Content */}
-            <main className={styles.main}>
-                <header className={styles.header}>
-                    <div>
-                        <h1 className={styles.pageTitle}>Incident Map</h1>
-                        <p className={styles.pageSubtitle}>
-                            View all incident locations •
-                            <span className={styles.incidentCount}> {incidents.length} incidents on map</span>
-                        </p>
-                    </div>
-                    <div className={styles.headerFilters}>
-                        <div className={styles.filterGroup}>
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className={styles.filterSelect}
-                            >
-                                <option value="unresolved">Unresolved Only</option>
-                                <option value="all">All Status</option>
-                                <option value="submitted">New</option>
-                                <option value="in_review">In Review</option>
-                                <option value="action_taken">Action Taken</option>
-                                <option value="resolved">Resolved</option>
-                            </select>
-                        </div>
-                        <div className={styles.filterGroup}>
+                        <div className={styles.filterSection}>
+                            <label>Category</label>
                             <select
                                 value={categoryFilter}
                                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -429,103 +447,122 @@ export default function PoliceMapPage() {
                                 ))}
                             </select>
                         </div>
-                    </div>
-                </header>
 
-                {/* Map Container */}
-                <div className={styles.mapWrapper}>
-                    <div ref={mapRef} className={styles.map}></div>
-
-                    {/* Legend */}
-                    <div className={styles.legend}>
-                        <h4>Status Legend</h4>
-                        <div className={styles.legendItems}>
-                            <div className={styles.legendItem}>
-                                <span className={styles.legendDot} style={{ background: '#D32F2F' }}></span>
-                                <span>New</span>
-                            </div>
-                            <div className={styles.legendItem}>
-                                <span className={styles.legendDot} style={{ background: '#F57C00' }}></span>
-                                <span>In Review</span>
-                            </div>
-                            <div className={styles.legendItem}>
-                                <span className={styles.legendDot} style={{ background: '#1976D2' }}></span>
-                                <span>Action Taken</span>
-                            </div>
-                            <div className={styles.legendItem}>
-                                <span className={styles.legendDot} style={{ background: '#388E3C' }}></span>
-                                <span>Resolved</span>
-                            </div>
+                        <div className={styles.filterSection}>
+                            <label className={styles.toggleLabel}>
+                                <input
+                                    type="checkbox"
+                                    checked={showHighPriorityOnly}
+                                    onChange={(e) => setShowHighPriorityOnly(e.target.checked)}
+                                />
+                                <span>High priority only</span>
+                            </label>
                         </div>
                     </div>
+                )}
 
-                    {/* No incidents message */}
-                    {incidents.length === 0 && (
-                        <div className={styles.noIncidents}>
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
-                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                            </svg>
-                            <p>No incidents with location data</p>
-                            <span>Incidents will appear here when users report with location enabled</span>
-                        </div>
-                    )}
+                {/* Legend */}
+                <div className={styles.legend}>
+                    <h4>Legend</h4>
+                    <div className={styles.legendItems}>
+                        {[
+                            { label: 'Pending', color: '#dc2626' },
+                            { label: 'In Review', color: '#d97706' },
+                            { label: 'In Progress', color: '#2563eb' },
+                            { label: 'Resolved', color: '#059669' },
+                        ].map(item => (
+                            <div key={item.label} className={styles.legendItem}>
+                                <span className={styles.legendDot} style={{ background: item.color }}></span>
+                                <span>{item.label}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Selected Incident Panel */}
-                {selectedIncident && (
-                    <div className={styles.incidentPanel}>
-                        <button
-                            className={styles.closePanel}
-                            onClick={() => setSelectedIncident(null)}
+                {/* No incidents message */}
+                {filteredIncidents.length === 0 && (
+                    <div className={styles.noIncidents}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="48" height="48">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                        </svg>
+                        <p>No incidents match your filters</p>
+                        <span>Try adjusting your filter settings</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Selected Incident Panel */}
+            {selectedIncident && (
+                <div className={styles.incidentPanel}>
+                    <button
+                        className={styles.closePanel}
+                        onClick={() => setSelectedIncident(null)}
+                    >
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </svg>
+                    </button>
+                    <div className={styles.panelHeader}>
+                        <span className={styles.panelTrackingId}>#{selectedIncident.tracking_id}</span>
+                        {['urgent', 'high'].includes(selectedIncident.priority) && (
+                            <span className={styles.panelPriority}>
+                                {selectedIncident.priority.toUpperCase()}
+                            </span>
+                        )}
+                        <span
+                            className={styles.panelStatus}
+                            style={{
+                                background: getStatusBg(selectedIncident.status),
+                                color: getStatusColor(selectedIncident.status)
+                            }}
                         >
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                            {getStatusLabel(selectedIncident.status)}
+                        </span>
+                    </div>
+                    <h3 className={styles.panelTitle}>{selectedIncident.title}</h3>
+                    <div className={styles.panelDetails}>
+                        <div className={styles.panelRow}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                <path d="M12 2l-5.5 9h11z M12 22l5.5-9H6.5z" />
                             </svg>
-                        </button>
-                        <div className={styles.panelHeader}>
-                            <span className={styles.panelTrackingId}>#{selectedIncident.tracking_id}</span>
-                            <span
-                                className={styles.panelStatus}
-                                style={{
-                                    background: getStatusBg(selectedIncident.status),
-                                    color: getStatusColor(selectedIncident.status)
-                                }}
-                            >
-                                {getStatusLabel(selectedIncident.status)}
+                            <span style={{ color: selectedIncident.category?.color }}>
+                                {selectedIncident.category?.name}
                             </span>
                         </div>
-                        <h3 className={styles.panelTitle}>{selectedIncident.title}</h3>
-                        <div className={styles.panelDetails}>
-                            <p>
-                                <strong>Category:</strong>
-                                <span style={{ color: selectedIncident.category?.color }}>
-                                    {selectedIncident.category?.name}
-                                </span>
-                            </p>
-                            <p>
-                                <strong>Reported:</strong> {formatTimeAgo(selectedIncident.created_at)}
-                            </p>
-                            <p>
-                                <strong>Reporter:</strong> {selectedIncident.user?.full_name}
-                            </p>
-                            {selectedIncident.address && (
-                                <p>
-                                    <strong>Location:</strong> {selectedIncident.address}
-                                </p>
-                            )}
-                            <p>
-                                <strong>Coordinates:</strong> {selectedIncident.latitude?.toFixed(6)}, {selectedIncident.longitude?.toFixed(6)}
-                            </p>
+                        <div className={styles.panelRow}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                            </svg>
+                            <span>{formatTimeAgo(selectedIncident.created_at)}</span>
                         </div>
+                        <div className={styles.panelRow}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                            </svg>
+                            <span>{selectedIncident.user?.full_name}</span>
+                        </div>
+                        {selectedIncident.address && (
+                            <div className={styles.panelRow}>
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                                </svg>
+                                <span className={styles.panelAddress}>{selectedIncident.address}</span>
+                            </div>
+                        )}
+                    </div>
+                    <div className={styles.panelActions}>
                         <Link
                             href={`/police/incident/${selectedIncident.id}`}
                             className={styles.panelButton}
                         >
-                            View Full Details
+                            View Details
                         </Link>
+                        <button className={styles.panelButtonSecondary}>
+                            Assign
+                        </button>
                     </div>
-                )}
-            </main>
-        </div>
+                </div>
+            )}
+        </>
     );
 }

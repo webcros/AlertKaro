@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import './police/police-design-system.css';
 import { NotificationProvider } from '@/lib/NotificationContext';
 
 export const metadata: Metadata = {

@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import styles from './page.module.css';
+
 
 interface DailyStats {
     date: string;
@@ -22,58 +21,54 @@ interface StatusStats {
     count: number;
 }
 
+interface Insight {
+    icon: string;
+    text: string;
+    type: 'info' | 'success' | 'warning';
+}
+
 export default function PoliceAnalyticsPage() {
-    const router = useRouter();
     const supabase = createClient();
 
-    const [profile, setProfile] = useState<{ full_name: string; role: string } | null>(null);
     const [loading, setLoading] = useState(true);
     const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
     const [categoryStats, setCategoryStats] = useState<CategoryStats[]>([]);
     const [statusStats, setStatusStats] = useState<StatusStats[]>([]);
-    const [totals, setTotals] = useState({ total: 0, thisWeek: 0, thisMonth: 0, resolved: 0 });
+    const [totals, setTotals] = useState({ total: 0, thisWeek: 0, thisMonth: 0, resolved: 0, lastWeek: 0, lastMonth: 0 });
+    const [insights, setInsights] = useState<Insight[]>([]);
 
     useEffect(() => {
         async function loadData() {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (!user) {
-                router.push('/login');
-                return;
-            }
-
-            const { data: profileData } = await supabase
-                .from('profiles')
-                .select('full_name, role')
-                .eq('id', user.id)
-                .single();
-
-            if (!profileData || !['police', 'admin'].includes(profileData.role)) {
-                router.push('/dashboard');
-                return;
-            }
-
-            setProfile(profileData);
-
             // Get date ranges
             const now = new Date();
             const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
             const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            const twoMonthsAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-            // Load totals
-            const [totalRes, weekRes, monthRes, resolvedRes] = await Promise.all([
+            // Load totals with comparison periods
+            const [totalRes, weekRes, monthRes, resolvedRes, lastWeekRes, lastMonthRes] = await Promise.all([
                 supabase.from('incidents').select('*', { count: 'exact', head: true }),
                 supabase.from('incidents').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo.toISOString()),
                 supabase.from('incidents').select('*', { count: 'exact', head: true }).gte('created_at', monthAgo.toISOString()),
                 supabase.from('incidents').select('*', { count: 'exact', head: true }).eq('status', 'resolved'),
+                supabase.from('incidents').select('*', { count: 'exact', head: true })
+                    .gte('created_at', twoWeeksAgo.toISOString())
+                    .lt('created_at', weekAgo.toISOString()),
+                supabase.from('incidents').select('*', { count: 'exact', head: true })
+                    .gte('created_at', twoMonthsAgo.toISOString())
+                    .lt('created_at', monthAgo.toISOString()),
             ]);
 
-            setTotals({
+            const totalsData = {
                 total: totalRes.count || 0,
                 thisWeek: weekRes.count || 0,
                 thisMonth: monthRes.count || 0,
                 resolved: resolvedRes.count || 0,
-            });
+                lastWeek: lastWeekRes.count || 0,
+                lastMonth: lastMonthRes.count || 0,
+            };
+            setTotals(totalsData);
 
             // Load daily stats for last 7 days
             const dailyData: DailyStats[] = [];
@@ -102,8 +97,8 @@ export default function PoliceAnalyticsPage() {
                 .from('categories')
                 .select('id, name, color');
 
+            let catStats: CategoryStats[] = [];
             if (categories) {
-                const catStats: CategoryStats[] = [];
                 for (const cat of categories) {
                     const { count } = await supabase
                         .from('incidents')
@@ -116,6 +111,8 @@ export default function PoliceAnalyticsPage() {
                         count: count || 0,
                     });
                 }
+                // Sort by count descending
+                catStats = catStats.sort((a, b) => b.count - a.count);
                 setCategoryStats(catStats);
             }
 
@@ -132,17 +129,86 @@ export default function PoliceAnalyticsPage() {
             }
             setStatusStats(sStats);
 
+            // Generate insights
+            const generatedInsights: Insight[] = [];
+
+            // Week over week comparison
+            if (totalsData.lastWeek > 0) {
+                const weekChange = ((totalsData.thisWeek - totalsData.lastWeek) / totalsData.lastWeek) * 100;
+                if (weekChange > 15) {
+                    generatedInsights.push({
+                        icon: '📈',
+                        text: `Incidents increased by ${Math.round(weekChange)}% this week compared to last week`,
+                        type: 'warning'
+                    });
+                } else if (weekChange < -15) {
+                    generatedInsights.push({
+                        icon: '📉',
+                        text: `Incidents decreased by ${Math.abs(Math.round(weekChange))}% this week`,
+                        type: 'success'
+                    });
+                }
+            }
+
+            // Resolution rate insight
+            const resolutionRate = totalsData.total > 0 ? (totalsData.resolved / totalsData.total) * 100 : 0;
+            if (resolutionRate >= 80) {
+                generatedInsights.push({
+                    icon: '✅',
+                    text: `Excellent resolution rate of ${Math.round(resolutionRate)}%`,
+                    type: 'success'
+                });
+            } else if (resolutionRate < 50) {
+                generatedInsights.push({
+                    icon: '⚠️',
+                    text: `Resolution rate is ${Math.round(resolutionRate)}% — consider prioritizing pending cases`,
+                    type: 'warning'
+                });
+            }
+
+            // Busiest day insight
+            if (dailyData.length > 0) {
+                const maxDay = dailyData.reduce((max, day) => day.count > max.count ? day : max, dailyData[0]);
+                if (maxDay.count > 0) {
+                    generatedInsights.push({
+                        icon: '📅',
+                        text: `${maxDay.date} was the busiest day with ${maxDay.count} incidents`,
+                        type: 'info'
+                    });
+                }
+            }
+
+            // Top category insight
+            if (catStats.length > 0 && catStats[0].count > 0) {
+                generatedInsights.push({
+                    icon: '🏷️',
+                    text: `"${catStats[0].name}" is the most reported category with ${catStats[0].count} incidents`,
+                    type: 'info'
+                });
+            }
+
+            // Pending cases insight
+            const pendingCount = sStats.find(s => s.status === 'submitted')?.count || 0;
+            if (pendingCount > 10) {
+                generatedInsights.push({
+                    icon: '🚨',
+                    text: `${pendingCount} incidents are still pending review`,
+                    type: 'warning'
+                });
+            }
+
+            setInsights(generatedInsights);
             setLoading(false);
         }
 
         loadData();
-    }, [supabase, router]);
+    }, [supabase]);
 
     const getStatusLabel = (status: string) => {
         switch (status) {
-            case 'submitted': return 'New';
+            case 'submitted': return 'Pending';
             case 'in_review': return 'In Review';
-            case 'action_taken': return 'Action Taken';
+            case 'action_taken': return 'In Progress';
             case 'resolved': return 'Resolved';
             default: return status;
         }
@@ -150,170 +216,281 @@ export default function PoliceAnalyticsPage() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'submitted': return '#D32F2F';
-            case 'in_review': return '#F57C00';
-            case 'action_taken': return '#1976D2';
-            case 'resolved': return '#388E3C';
-            default: return '#757575';
+            case 'submitted': return '#dc2626';
+            case 'in_review': return '#d97706';
+            case 'action_taken': return '#2563eb';
+            case 'resolved': return '#059669';
+            default: return '#64748b';
         }
     };
 
+    const calculateTrend = (current: number, previous: number) => {
+        if (previous === 0) return { value: current > 0 ? 100 : 0, direction: current > 0 ? 'up' : 'neutral' };
+        const change = ((current - previous) / previous) * 100;
+        return {
+            value: Math.abs(Math.round(change)),
+            direction: change > 0 ? 'up' : change < 0 ? 'down' : 'neutral'
+        };
+    };
+
     const maxDaily = Math.max(...dailyStats.map(d => d.count), 1);
+    const resolutionRate = totals.total > 0 ? Math.round((totals.resolved / totals.total) * 100) : 0;
+    const weekTrend = calculateTrend(totals.thisWeek, totals.lastWeek);
+    const monthTrend = calculateTrend(totals.thisMonth, totals.lastMonth);
+    const totalStatusCount = statusStats.reduce((sum, s) => sum + s.count, 0);
 
     if (loading) {
         return (
-            <div className={styles.loading}>
+            <div className={styles.contentLoading}>
                 <div className={styles.spinner}></div>
             </div>
         );
     }
 
     return (
-        <div className={styles.page}>
-            {/* Sidebar */}
-            <aside className={styles.sidebar}>
-                <div className={styles.logo}>
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-                    </svg>
-                    <span>AlertKaro</span>
+        <>
+            <header className={styles.header}>
+                <div>
+                    <h1 className={styles.pageTitle}>Analytics</h1>
+                    <p className={styles.pageSubtitle}>Incident statistics and insights</p>
                 </div>
-
-                <nav className={styles.nav}>
-                    <Link href="/police" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                <div className={styles.headerActions}>
+                    <button className={styles.exportBtn}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2v9.67z" />
                         </svg>
-                        Dashboard
-                    </Link>
-                    <Link href="/police/incidents" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        Export Report
+                    </button>
+                </div>
+            </header>
+
+            {/* Summary Cards */}
+            <div className={styles.summaryGrid}>
+                <div className={styles.summaryCard}>
+                    <div className={styles.summaryIcon} style={{ background: 'var(--police-accent-bg)' }}>
+                        <svg viewBox="0 0 24 24" fill="var(--police-accent)" width="24" height="24">
                             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6z" />
                         </svg>
-                        All Incidents
-                    </Link>
-                    <Link href="/police/map" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        Map View
-                    </Link>
-                    <Link href="/police/analytics" className={`${styles.navLink} ${styles.active}`}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
-                        </svg>
-                        Analytics
-                    </Link>
-                </nav>
-            </aside>
-
-            {/* Main */}
-            <main className={styles.main}>
-                <header className={styles.header}>
-                    <h1 className={styles.pageTitle}>Analytics</h1>
-                    <p className={styles.pageSubtitle}>Incident statistics and trends</p>
-                </header>
-
-                {/* Summary Cards */}
-                <div className={styles.summaryGrid}>
-                    <div className={styles.summaryCard}>
+                    </div>
+                    <div className={styles.summaryContent}>
                         <span className={styles.summaryValue}>{totals.total}</span>
-                        <span className={styles.summaryLabel}>Total Cases</span>
+                        <span className={styles.summaryLabel}>Total Incidents</span>
                     </div>
-                    <div className={styles.summaryCard}>
+                </div>
+                <div className={styles.summaryCard}>
+                    <div className={styles.summaryIcon} style={{ background: '#fef3c7' }}>
+                        <svg viewBox="0 0 24 24" fill="#d97706" width="24" height="24">
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                        </svg>
+                    </div>
+                    <div className={styles.summaryContent}>
                         <span className={styles.summaryValue}>{totals.thisWeek}</span>
-                        <span className={styles.summaryLabel}>This Week</span>
+                        <span className={styles.summaryLabel}>New This Week</span>
+                        {weekTrend.value > 0 && (
+                            <span className={`${styles.trend} ${styles[weekTrend.direction]}`}>
+                                {weekTrend.direction === 'up' ? '↑' : '↓'} {weekTrend.value}%
+                            </span>
+                        )}
                     </div>
-                    <div className={styles.summaryCard}>
+                </div>
+                <div className={styles.summaryCard}>
+                    <div className={styles.summaryIcon} style={{ background: '#dbeafe' }}>
+                        <svg viewBox="0 0 24 24" fill="#2563eb" width="24" height="24">
+                            <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5zm2 4h10v2H7zm0 4h7v2H7z" />
+                        </svg>
+                    </div>
+                    <div className={styles.summaryContent}>
                         <span className={styles.summaryValue}>{totals.thisMonth}</span>
-                        <span className={styles.summaryLabel}>This Month</span>
+                        <span className={styles.summaryLabel}>New This Month</span>
+                        {monthTrend.value > 0 && (
+                            <span className={`${styles.trend} ${styles[monthTrend.direction]}`}>
+                                {monthTrend.direction === 'up' ? '↑' : '↓'} {monthTrend.value}%
+                            </span>
+                        )}
                     </div>
-                    <div className={styles.summaryCard}>
-                        <span className={styles.summaryValue}>
-                            {totals.total > 0 ? Math.round((totals.resolved / totals.total) * 100) : 0}%
-                        </span>
+                </div>
+                <div className={styles.summaryCard}>
+                    <div className={styles.summaryIcon} style={{ background: resolutionRate >= 70 ? '#dcfce7' : '#fef2f2' }}>
+                        <svg viewBox="0 0 24 24" fill={resolutionRate >= 70 ? '#059669' : '#dc2626'} width="24" height="24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                        </svg>
+                    </div>
+                    <div className={styles.summaryContent}>
+                        <span className={styles.summaryValue}>{resolutionRate}%</span>
                         <span className={styles.summaryLabel}>Resolution Rate</span>
+                        <span className={`${styles.trend} ${resolutionRate >= 70 ? styles.up : styles.down}`}>
+                            {totals.resolved} of {totals.total} resolved
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Insights Section */}
+            {insights.length > 0 && (
+                <div className={styles.insightsSection}>
+                    <h2 className={styles.sectionTitle}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                            <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1z" />
+                        </svg>
+                        Key Insights
+                    </h2>
+                    <div className={styles.insightsList}>
+                        {insights.map((insight, i) => (
+                            <div key={i} className={`${styles.insightCard} ${styles[insight.type]}`}>
+                                <span className={styles.insightIcon}>{insight.icon}</span>
+                                <span className={styles.insightText}>{insight.text}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <div className={styles.chartsGrid}>
+                {/* Daily Trend - Line Chart Style */}
+                <div className={styles.chartCard}>
+                    <div className={styles.chartHeader}>
+                        <h2 className={styles.chartTitle}>Daily Trend</h2>
+                        <span className={styles.chartSubtitle}>Last 7 days</span>
+                    </div>
+                    <div className={styles.lineChart}>
+                        <div className={styles.lineChartGrid}>
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className={styles.gridLine}></div>
+                            ))}
+                        </div>
+                        <svg className={styles.lineChartSvg} viewBox={`0 0 ${dailyStats.length * 50} 120`} preserveAspectRatio="none">
+                            {/* Area under line */}
+                            <path
+                                d={`
+                                        M 0 ${120 - (dailyStats[0]?.count / maxDaily) * 100}
+                                        ${dailyStats.map((d, i) => `L ${i * 50 + 25} ${120 - (d.count / maxDaily) * 100}`).join(' ')}
+                                        L ${(dailyStats.length - 1) * 50 + 25} 120
+                                        L 0 120
+                                        Z
+                                    `}
+                                fill="url(#areaGradient)"
+                            />
+                            {/* Line */}
+                            <path
+                                d={`M ${dailyStats.map((d, i) => `${i * 50 + 25} ${120 - (d.count / maxDaily) * 100}`).join(' L ')}`}
+                                fill="none"
+                                stroke="var(--police-accent)"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                            {/* Points */}
+                            {dailyStats.map((d, i) => (
+                                <circle
+                                    key={i}
+                                    cx={i * 50 + 25}
+                                    cy={120 - (d.count / maxDaily) * 100}
+                                    r="5"
+                                    fill="white"
+                                    stroke="var(--police-accent)"
+                                    strokeWidth="3"
+                                />
+                            ))}
+                            <defs>
+                                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="var(--police-accent)" stopOpacity="0.3" />
+                                    <stop offset="100%" stopColor="var(--police-accent)" stopOpacity="0" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div className={styles.lineChartLabels}>
+                            {dailyStats.map((d, i) => (
+                                <div key={i} className={styles.chartLabel}>
+                                    <span className={styles.labelDay}>{d.date}</span>
+                                    <span className={styles.labelValue}>{d.count}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
-                <div className={styles.chartsGrid}>
-                    {/* Daily Trend */}
-                    <div className={styles.chartCard}>
-                        <h2 className={styles.chartTitle}>Daily Incidents (Last 7 Days)</h2>
-                        <div className={styles.barChart}>
-                            {dailyStats.map((day, i) => (
-                                <div key={i} className={styles.barGroup}>
-                                    <div className={styles.barWrapper}>
-                                        <div
-                                            className={styles.bar}
-                                            style={{ height: `${(day.count / maxDaily) * 100}%` }}
-                                        >
-                                            <span className={styles.barValue}>{day.count}</span>
-                                        </div>
-                                    </div>
-                                    <span className={styles.barLabel}>{day.date}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* By Status */}
-                    <div className={styles.chartCard}>
+                {/* Status Distribution - Donut Chart */}
+                <div className={styles.chartCard}>
+                    <div className={styles.chartHeader}>
                         <h2 className={styles.chartTitle}>By Status</h2>
-                        <div className={styles.statusList}>
+                        <span className={styles.chartSubtitle}>Current distribution</span>
+                    </div>
+                    <div className={styles.donutChart}>
+                        <div className={styles.donutWrapper}>
+                            <svg viewBox="0 0 100 100" className={styles.donutSvg}>
+                                {(() => {
+                                    let offset = 0;
+                                    return statusStats.map((stat, i) => {
+                                        const percentage = totalStatusCount > 0 ? (stat.count / totalStatusCount) * 100 : 0;
+                                        const strokeDasharray = `${percentage * 2.51} ${251.2 - percentage * 2.51}`;
+                                        const strokeDashoffset = -offset * 2.51;
+                                        offset += percentage;
+                                        return (
+                                            <circle
+                                                key={i}
+                                                cx="50"
+                                                cy="50"
+                                                r="40"
+                                                fill="none"
+                                                stroke={getStatusColor(stat.status)}
+                                                strokeWidth="12"
+                                                strokeDasharray={strokeDasharray}
+                                                strokeDashoffset={strokeDashoffset}
+                                                className={styles.donutSegment}
+                                            />
+                                        );
+                                    });
+                                })()}
+                            </svg>
+                            <div className={styles.donutCenter}>
+                                <span className={styles.donutValue}>{totals.total}</span>
+                                <span className={styles.donutLabel}>Total</span>
+                            </div>
+                        </div>
+                        <div className={styles.donutLegend}>
                             {statusStats.map((stat) => (
-                                <div key={stat.status} className={styles.statusItem}>
-                                    <div className={styles.statusInfo}>
-                                        <span
-                                            className={styles.statusDot}
-                                            style={{ backgroundColor: getStatusColor(stat.status) }}
-                                        ></span>
-                                        <span>{getStatusLabel(stat.status)}</span>
-                                    </div>
-                                    <div className={styles.statusBar}>
-                                        <div
-                                            className={styles.statusFill}
-                                            style={{
-                                                width: `${totals.total > 0 ? (stat.count / totals.total) * 100 : 0}%`,
-                                                backgroundColor: getStatusColor(stat.status)
-                                            }}
-                                        ></div>
-                                    </div>
-                                    <span className={styles.statusCount}>{stat.count}</span>
+                                <div key={stat.status} className={styles.legendItem}>
+                                    <span className={styles.legendDot} style={{ background: getStatusColor(stat.status) }}></span>
+                                    <span className={styles.legendLabel}>{getStatusLabel(stat.status)}</span>
+                                    <span className={styles.legendValue}>{stat.count}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
+                </div>
 
-                    {/* By Category */}
-                    <div className={styles.chartCard}>
+                {/* By Category - Horizontal Bars */}
+                <div className={styles.chartCard}>
+                    <div className={styles.chartHeader}>
                         <h2 className={styles.chartTitle}>By Category</h2>
-                        <div className={styles.categoryList}>
-                            {categoryStats.map((cat) => (
+                        <span className={styles.chartSubtitle}>All time</span>
+                    </div>
+                    <div className={styles.categoryList}>
+                        {categoryStats.map((cat) => {
+                            const percentage = totals.total > 0 ? (cat.count / totals.total) * 100 : 0;
+                            return (
                                 <div key={cat.name} className={styles.categoryItem}>
-                                    <div className={styles.categoryInfo}>
-                                        <span
-                                            className={styles.categoryDot}
-                                            style={{ backgroundColor: cat.color }}
-                                        ></span>
-                                        <span>{cat.name}</span>
+                                    <div className={styles.categoryHeader}>
+                                        <span className={styles.categoryName}>{cat.name}</span>
+                                        <span className={styles.categoryCount}>{cat.count}</span>
                                     </div>
                                     <div className={styles.categoryBar}>
                                         <div
                                             className={styles.categoryFill}
                                             style={{
-                                                width: `${totals.total > 0 ? (cat.count / totals.total) * 100 : 0}%`,
+                                                width: `${percentage}%`,
                                                 backgroundColor: cat.color
                                             }}
                                         ></div>
                                     </div>
-                                    <span className={styles.categoryCount}>{cat.count}</span>
+                                    <span className={styles.categoryPercent}>{Math.round(percentage)}%</span>
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })}
                     </div>
                 </div>
-            </main>
-        </div>
+            </div>
+        </>
     );
 }
+

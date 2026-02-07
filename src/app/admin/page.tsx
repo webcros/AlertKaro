@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import styles from './page.module.css';
+
 
 interface Stats {
     totalUsers: number;
@@ -25,36 +25,14 @@ interface RecentActivity {
 }
 
 export default function AdminDashboardPage() {
-    const router = useRouter();
     const supabase = createClient();
 
-    const [profile, setProfile] = useState<{ full_name: string; role: string } | null>(null);
     const [stats, setStats] = useState<Stats | null>(null);
     const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         async function loadData() {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            if (!user) {
-                router.push('/login');
-                return;
-            }
-
-            const { data: profileData } = await supabase
-                .from('profiles')
-                .select('full_name, role')
-                .eq('id', user.id)
-                .single();
-
-            if (!profileData || profileData.role !== 'admin') {
-                router.push('/dashboard');
-                return;
-            }
-
-            setProfile(profileData);
-
             // Load stats
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -124,7 +102,7 @@ export default function AdminDashboardPage() {
         }
 
         loadData();
-    }, [supabase, router]);
+    }, [supabase]);
 
     const formatTimeAgo = (date: string) => {
         const now = new Date();
@@ -140,260 +118,180 @@ export default function AdminDashboardPage() {
         return `${diffDays}d ago`;
     };
 
-    const handleSignOut = async () => {
-        await supabase.auth.signOut();
-        router.push('/login');
-    };
-
     if (loading || !stats) {
         return (
-            <div className={styles.loading}>
+            <div className={styles.contentLoading}>
                 <div className={styles.spinner}></div>
             </div>
         );
     }
 
     return (
-        <div className={styles.page}>
-            {/* Sidebar */}
-            <aside className={styles.sidebar}>
-                <div className={styles.logo}>
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-                    </svg>
-                    <span>AlertKaro</span>
-                    <span className={styles.adminBadge}>Admin</span>
+        <>
+            <header className={styles.header}>
+                <div>
+                    <h1 className={styles.pageTitle}>Admin Dashboard</h1>
+                    <p className={styles.pageSubtitle}>System overview and management</p>
                 </div>
+            </header>
 
-                <nav className={styles.nav}>
-                    <Link href="/admin" className={`${styles.navLink} ${styles.active}`}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+            {/* Stats Grid */}
+            <div className={styles.statsGrid}>
+                <Link href="/admin/users" className={styles.statCard}>
+                    <div className={styles.statIcon} style={{ background: '#E3F2FD' }}>
+                        <svg viewBox="0 0 24 24" fill="#1976D2" width="24" height="24">
+                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" />
                         </svg>
-                        Dashboard
-                    </Link>
-                    <Link href="/admin/users" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+                    </div>
+                    <div>
+                        <span className={styles.statValue}>{stats.totalUsers}</span>
+                        <span className={styles.statLabel}>Citizens</span>
+                    </div>
+                </Link>
+                <Link href="/admin/police" className={styles.statCard}>
+                    <div className={styles.statIcon} style={{ background: '#E8F5E9' }}>
+                        <svg viewBox="0 0 24 24" fill="#388E3C" width="24" height="24">
+                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
                         </svg>
-                        Users
-                    </Link>
-                    <Link href="/admin/police" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
-                        </svg>
-                        Police
-                    </Link>
-                    <Link href="/admin/incidents" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                    </div>
+                    <div>
+                        <span className={styles.statValue}>{stats.totalPolice}</span>
+                        <span className={styles.statLabel}>Police Officers</span>
+                    </div>
+                </Link>
+                <Link href="/admin/incidents" className={styles.statCard}>
+                    <div className={styles.statIcon} style={{ background: '#FFF3E0' }}>
+                        <svg viewBox="0 0 24 24" fill="#F57C00" width="24" height="24">
                             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6z" />
                         </svg>
-                        Incidents
-                    </Link>
-                    <Link href="/admin/categories" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M12 2l-5.5 9h11z M17.5 13h-11l5.5 9z" />
-                        </svg>
-                        Categories
-                    </Link>
-                    <Link href="/admin/areas" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        Areas
-                    </Link>
-                    <Link href="/admin/audit" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" />
-                        </svg>
-                        Audit Logs
-                    </Link>
-                </nav>
-
-                <div className={styles.sidebarFooter}>
-                    <div className={styles.userInfo}>
-                        <div className={styles.userAvatar}>
-                            {profile?.full_name?.charAt(0)}
-                        </div>
-                        <div>
-                            <p className={styles.userName}>{profile?.full_name}</p>
-                            <p className={styles.userRole}>Administrator</p>
-                        </div>
                     </div>
-                    <button onClick={handleSignOut} className={styles.signOutBtn}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
-                        </svg>
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className={styles.main}>
-                <header className={styles.header}>
                     <div>
-                        <h1 className={styles.pageTitle}>Admin Dashboard</h1>
-                        <p className={styles.pageSubtitle}>System overview and management</p>
+                        <span className={styles.statValue}>{stats.totalIncidents}</span>
+                        <span className={styles.statLabel}>Total Incidents</span>
                     </div>
-                </header>
+                </Link>
+                <div className={styles.statCard}>
+                    <div className={styles.statIcon} style={{ background: '#FFEBEE' }}>
+                        <svg viewBox="0 0 24 24" fill="#D32F2F" width="24" height="24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span className={styles.statValue}>{stats.pendingIncidents}</span>
+                        <span className={styles.statLabel}>Pending</span>
+                    </div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={styles.statIcon} style={{ background: '#E8F5E9' }}>
+                        <svg viewBox="0 0 24 24" fill="#388E3C" width="24" height="24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span className={styles.statValue}>{stats.resolvedIncidents}</span>
+                        <span className={styles.statLabel}>Resolved</span>
+                    </div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={styles.statIcon} style={{ background: '#F3E5F5' }}>
+                        <svg viewBox="0 0 24 24" fill="#7B1FA2" width="24" height="24">
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span className={styles.statValue}>{stats.todayIncidents}</span>
+                        <span className={styles.statLabel}>Today</span>
+                    </div>
+                </div>
+            </div>
 
-                {/* Stats Grid */}
-                <div className={styles.statsGrid}>
-                    <Link href="/admin/users" className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#E3F2FD' }}>
-                            <svg viewBox="0 0 24 24" fill="#1976D2" width="24" height="24">
-                                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+            {/* Quick Actions & Recent Activity */}
+            <div className={styles.contentGrid}>
+                <div className={styles.card}>
+                    <h2 className={styles.cardTitle}>Quick Actions</h2>
+                    <div className={styles.quickActions}>
+                        <Link href="/admin/users?action=add" className={styles.actionButton}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                                <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                             </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.totalUsers}</span>
-                            <span className={styles.statLabel}>Citizens</span>
-                        </div>
-                    </Link>
-                    <Link href="/admin/police" className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#E8F5E9' }}>
-                            <svg viewBox="0 0 24 24" fill="#388E3C" width="24" height="24">
-                                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                            Add Police User
+                        </Link>
+                        <Link href="/admin/categories?action=add" className={styles.actionButton}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                             </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.totalPolice}</span>
-                            <span className={styles.statLabel}>Police Officers</span>
-                        </div>
-                    </Link>
-                    <Link href="/admin/incidents" className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#FFF3E0' }}>
-                            <svg viewBox="0 0 24 24" fill="#F57C00" width="24" height="24">
-                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                            Add Category
+                        </Link>
+                        <Link href="/admin/areas?action=add" className={styles.actionButton}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                             </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.totalIncidents}</span>
-                            <span className={styles.statLabel}>Total Incidents</span>
-                        </div>
-                    </Link>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#FFEBEE' }}>
-                            <svg viewBox="0 0 24 24" fill="#D32F2F" width="24" height="24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                            Add Area
+                        </Link>
+                        <Link href="/admin/incidents?export=csv" className={styles.actionButton}>
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
                             </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.pendingIncidents}</span>
-                            <span className={styles.statLabel}>Pending</span>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#E8F5E9' }}>
-                            <svg viewBox="0 0 24 24" fill="#388E3C" width="24" height="24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.resolvedIncidents}</span>
-                            <span className={styles.statLabel}>Resolved</span>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#F3E5F5' }}>
-                            <svg viewBox="0 0 24 24" fill="#7B1FA2" width="24" height="24">
-                                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.todayIncidents}</span>
-                            <span className={styles.statLabel}>Today</span>
-                        </div>
+                            Export Reports
+                        </Link>
                     </div>
                 </div>
 
-                {/* Quick Actions & Recent Activity */}
-                <div className={styles.contentGrid}>
-                    <div className={styles.card}>
-                        <h2 className={styles.cardTitle}>Quick Actions</h2>
-                        <div className={styles.quickActions}>
-                            <Link href="/admin/users?action=add" className={styles.actionButton}>
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                                    <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                                </svg>
-                                Add Police User
-                            </Link>
-                            <Link href="/admin/categories?action=add" className={styles.actionButton}>
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                                </svg>
-                                Add Category
-                            </Link>
-                            <Link href="/admin/areas?action=add" className={styles.actionButton}>
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                </svg>
-                                Add Area
-                            </Link>
-                            <Link href="/admin/incidents?export=csv" className={styles.actionButton}>
-                                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                                </svg>
-                                Export Reports
-                            </Link>
-                        </div>
-                    </div>
-
-                    <div className={styles.card}>
-                        <h2 className={styles.cardTitle}>Recent Activity</h2>
-                        {recentActivity.length === 0 ? (
-                            <p className={styles.noActivity}>No recent activity</p>
-                        ) : (
-                            <div className={styles.activityList}>
-                                {recentActivity.map((activity) => (
-                                    <div key={`${activity.type}-${activity.id}`} className={styles.activityItem}>
-                                        <div
-                                            className={styles.activityIcon}
-                                            style={{
-                                                background: activity.type === 'incident' ? '#FFF3E0' : '#E3F2FD'
-                                            }}
-                                        >
-                                            {activity.type === 'incident' ? (
-                                                <svg viewBox="0 0 24 24" fill="#F57C00" width="16" height="16">
-                                                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6z" />
-                                                </svg>
-                                            ) : (
-                                                <svg viewBox="0 0 24 24" fill="#1976D2" width="16" height="16">
-                                                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                                                </svg>
-                                            )}
-                                        </div>
-                                        <div className={styles.activityContent}>
-                                            <p className={styles.activityTitle}>{activity.title}</p>
-                                            <span className={styles.activityTime}>{formatTimeAgo(activity.timestamp)}</span>
-                                        </div>
+                <div className={styles.card}>
+                    <h2 className={styles.cardTitle}>Recent Activity</h2>
+                    {recentActivity.length === 0 ? (
+                        <p className={styles.noActivity}>No recent activity</p>
+                    ) : (
+                        <div className={styles.activityList}>
+                            {recentActivity.map((activity) => (
+                                <div key={`${activity.type}-${activity.id}`} className={styles.activityItem}>
+                                    <div
+                                        className={styles.activityIcon}
+                                        style={{
+                                            background: activity.type === 'incident' ? '#FFF3E0' : '#E3F2FD'
+                                        }}
+                                    >
+                                        {activity.type === 'incident' ? (
+                                            <svg viewBox="0 0 24 24" fill="#F57C00" width="16" height="16">
+                                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                                            </svg>
+                                        ) : (
+                                            <svg viewBox="0 0 24 24" fill="#1976D2" width="16" height="16">
+                                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                                            </svg>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                    <div className={styles.activityContent}>
+                                        <p className={styles.activityTitle}>{activity.title}</p>
+                                        <span className={styles.activityTime}>{formatTimeAgo(activity.timestamp)}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
+            </div>
 
-                {/* System Info */}
-                <div className={styles.systemInfo}>
-                    <div className={styles.infoItem}>
-                        <span className={styles.infoLabel}>Categories</span>
-                        <span className={styles.infoValue}>{stats.categories}</span>
-                    </div>
-                    <div className={styles.infoItem}>
-                        <span className={styles.infoLabel}>Areas</span>
-                        <span className={styles.infoValue}>{stats.areas}</span>
-                    </div>
-                    <div className={styles.infoItem}>
-                        <span className={styles.infoLabel}>Resolution Rate</span>
-                        <span className={styles.infoValue}>
-                            {stats.totalIncidents > 0
-                                ? Math.round((stats.resolvedIncidents / stats.totalIncidents) * 100)
-                                : 0}%
-                        </span>
-                    </div>
+            {/* System Info */}
+            <div className={styles.systemInfo}>
+                <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Categories</span>
+                    <span className={styles.infoValue}>{stats.categories}</span>
                 </div>
-            </main>
-        </div>
+                <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Areas</span>
+                    <span className={styles.infoValue}>{stats.areas}</span>
+                </div>
+                <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Resolution Rate</span>
+                    <span className={styles.infoValue}>
+                        {stats.totalIncidents > 0
+                            ? Math.round((stats.resolvedIncidents / stats.totalIncidents) * 100)
+                            : 0}%
+                    </span>
+                </div>
+            </div>
+        </>
     );
 }
+

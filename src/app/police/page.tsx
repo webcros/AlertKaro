@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -45,46 +45,27 @@ interface Stats {
     today: number;
 }
 
+type DateFilter = 'all' | 'today' | 'week' | 'month';
+
 export default function PoliceDashboardPage() {
     const router = useRouter();
     const supabase = createClient();
 
-    const [profile, setProfile] = useState<{ full_name: string; role: string } | null>(null);
     const [incidents, setIncidents] = useState<Incident[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, inProgress: 0, resolved: 0, today: 0 });
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
+    const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
+    // Initial data load
     useEffect(() => {
-        async function checkAccess() {
-            const { data: { user } } = await supabase.auth.getUser();
+        loadData();
+    }, []);
 
-            if (!user) {
-                router.push('/login');
-                return;
-            }
-
-            const { data: profileData } = await supabase
-                .from('profiles')
-                .select('full_name, role')
-                .eq('id', user.id)
-                .single();
-
-            if (!profileData || !['police', 'admin'].includes(profileData.role)) {
-                router.push('/dashboard');
-                return;
-            }
-
-            setProfile(profileData);
-            loadData();
-        }
-
-        checkAccess();
-    }, [supabase, router]);
-
-    async function loadData() {
+    const loadData = useCallback(async () => {
         try {
             // Load categories
             const { data: catData } = await supabase
@@ -94,23 +75,38 @@ export default function PoliceDashboardPage() {
 
             if (catData) setCategories(catData);
 
+            // Calculate date filter
+            const now = new Date();
+            let dateFrom: Date | null = null;
+
+            if (dateFilter === 'today') {
+                dateFrom = new Date(now);
+                dateFrom.setHours(0, 0, 0, 0);
+            } else if (dateFilter === 'week') {
+                dateFrom = new Date(now);
+                dateFrom.setDate(dateFrom.getDate() - 7);
+            } else if (dateFilter === 'month') {
+                dateFrom = new Date(now);
+                dateFrom.setMonth(dateFrom.getMonth() - 1);
+            }
+
             // Build query with filters
             let query = supabase
                 .from('incidents')
                 .select(`
-          id,
-          tracking_id,
-          title,
-          description,
-          status,
-          priority,
-          address,
-          created_at,
-          updated_at,
-          user:profiles!incidents_user_id_fkey(full_name, phone, avatar_url),
-          category:categories(name, icon, color),
-          area:areas(name)
-        `)
+                    id,
+                    tracking_id,
+                    title,
+                    description,
+                    status,
+                    priority,
+                    address,
+                    created_at,
+                    updated_at,
+                    user:profiles!incidents_user_id_fkey(full_name, phone, avatar_url),
+                    category:categories(name, icon, color),
+                    area:areas(name)
+                `)
                 .order('created_at', { ascending: false });
 
             if (statusFilter !== 'all') {
@@ -121,7 +117,11 @@ export default function PoliceDashboardPage() {
                 query = query.eq('category_id', categoryFilter);
             }
 
-            const { data: incidentData } = await query.limit(50);
+            if (dateFrom) {
+                query = query.gte('created_at', dateFrom.toISOString());
+            }
+
+            const { data: incidentData } = await query.limit(20);
 
             if (incidentData) {
                 setIncidents(incidentData as unknown as Incident[]);
@@ -147,19 +147,20 @@ export default function PoliceDashboardPage() {
                 today: todayRes.count || 0,
             });
 
+            setLastUpdated(new Date());
+
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
             setLoading(false);
         }
-    }
+    }, [supabase, statusFilter, categoryFilter, dateFilter]);
 
+    // Reload data when filters change
     useEffect(() => {
-        if (profile) {
-            setLoading(true);
-            loadData();
-        }
-    }, [statusFilter, categoryFilter]);
+        setLoading(true);
+        loadData();
+    }, [statusFilter, categoryFilter, dateFilter, loadData]);
 
     const formatTimeAgo = (date: string) => {
         const now = new Date();
@@ -176,241 +177,258 @@ export default function PoliceDashboardPage() {
         return then.toLocaleDateString();
     };
 
+    const formatLastUpdated = () => {
+        const diffMs = new Date().getTime() - lastUpdated.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} minutes ago`;
+        return lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
     const getStatusInfo = (status: string) => {
         switch (status) {
             case 'submitted':
-                return { label: 'New', color: '#D32F2F', bg: '#FFEBEE' };
+                return { label: 'Pending', color: 'var(--status-pending)', bg: 'var(--status-pending-bg)' };
             case 'in_review':
-                return { label: 'In Review', color: '#F57C00', bg: '#FFF3E0' };
+                return { label: 'In Review', color: 'var(--status-in-review)', bg: 'var(--status-in-review-bg)' };
             case 'action_taken':
-                return { label: 'Action Taken', color: '#1976D2', bg: '#E3F2FD' };
+                return { label: 'In Progress', color: 'var(--status-in-progress)', bg: 'var(--status-in-progress-bg)' };
             case 'resolved':
-                return { label: 'Resolved', color: '#388E3C', bg: '#E8F5E9' };
+                return { label: 'Resolved', color: 'var(--status-resolved)', bg: 'var(--status-resolved-bg)' };
             default:
-                return { label: status, color: '#757575', bg: '#F5F5F5' };
+                return { label: status, color: 'var(--police-text-muted)', bg: 'var(--police-surface)' };
         }
     };
 
     const getPriorityBadge = (priority: string) => {
         switch (priority) {
             case 'urgent':
-                return { label: 'URGENT', color: '#D32F2F' };
+                return { label: 'URGENT', className: styles.urgent };
             case 'high':
-                return { label: 'HIGH', color: '#F57C00' };
+                return { label: 'HIGH', className: styles.high };
             default:
                 return null;
         }
     };
 
-    const handleSignOut = async () => {
-        await supabase.auth.signOut();
-        router.push('/login');
+    const handleStatClick = (filterValue: string) => {
+        if (filterValue === statusFilter) {
+            setStatusFilter('all');
+        } else {
+            setStatusFilter(filterValue);
+        }
     };
 
-    if (loading) {
-        return (
-            <div className={styles.loading}>
-                <div className={styles.spinner}></div>
-            </div>
-        );
-    }
+    const clearAllFilters = () => {
+        setStatusFilter('all');
+        setCategoryFilter('all');
+        setDateFilter('all');
+    };
+
+    const hasActiveFilters = statusFilter !== 'all' || categoryFilter !== 'all' || dateFilter !== 'all';
 
     return (
-        <div className={styles.page}>
-            {/* Sidebar */}
-            <aside className={styles.sidebar}>
-                <div className={styles.logo}>
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
-                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-                    </svg>
-                    <span>AlertKaro</span>
+        <>
+            <header className={styles.header}>
+                <div>
+                    <h1 className={styles.pageTitle}>Police Dashboard</h1>
+                    <p className={styles.pageSubtitle}>Monitor and manage incident reports</p>
                 </div>
-
-                <nav className={styles.nav}>
-                    <Link href="/police" className={`${styles.navLink} ${styles.active}`}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+                <div className={styles.headerActions}>
+                    <span className={styles.lastUpdated}>
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
                         </svg>
-                        Dashboard
-                    </Link>
-                    <Link href="/police/incidents" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        Updated {formatLastUpdated()}
+                    </span>
+                    <span className={styles.liveIndicator}>
+                        <span className={styles.liveDot}></span>
+                        Live
+                    </span>
+                </div>
+            </header>
+
+            {/* Stats Cards */}
+            <div className={styles.statsGrid}>
+                <div
+                    className={`${styles.statCard} ${statusFilter === 'all' ? styles.active : ''}`}
+                    onClick={() => handleStatClick('all')}
+                    style={{ '--stat-color': 'var(--police-accent)' } as React.CSSProperties}
+                >
+                    <div className={styles.statIcon} style={{ background: 'var(--police-accent-bg)' }}>
+                        <svg viewBox="0 0 24 24" fill="var(--police-accent)" width="24" height="24">
                             <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6z" />
                         </svg>
-                        All Incidents
-                    </Link>
-                    <Link href="/police/map" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        Map View
-                    </Link>
-                    <Link href="/police/analytics" className={styles.navLink}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
-                        </svg>
-                        Analytics
-                    </Link>
-                </nav>
-
-                <div className={styles.sidebarFooter}>
-                    <div className={styles.userInfo}>
-                        <div className={styles.userAvatar}>
-                            {profile?.full_name?.charAt(0)}
-                        </div>
-                        <div>
-                            <p className={styles.userName}>{profile?.full_name}</p>
-                            <p className={styles.userRole}>{profile?.role}</p>
-                        </div>
                     </div>
-                    <button onClick={handleSignOut} className={styles.signOutBtn}>
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    <div className={styles.statContent}>
+                        <span className={styles.statValue}>{stats.total}</span>
+                        <span className={styles.statLabel}>Total Active Incidents</span>
+                    </div>
+                </div>
+
+                <div
+                    className={`${styles.statCard} ${statusFilter === 'submitted' ? styles.active : ''}`}
+                    onClick={() => handleStatClick('submitted')}
+                    style={{ '--stat-color': 'var(--status-pending)' } as React.CSSProperties}
+                >
+                    <div className={styles.statIcon} style={{ background: 'var(--status-pending-bg)' }}>
+                        <svg viewBox="0 0 24 24" fill="var(--status-pending)" width="24" height="24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                         </svg>
+                    </div>
+                    <div className={styles.statContent}>
+                        <span className={styles.statValue}>{stats.pending}</span>
+                        <span className={styles.statLabel}>Pending Review</span>
+                    </div>
+                </div>
+
+                <div
+                    className={`${styles.statCard} ${statusFilter === 'in_review' || statusFilter === 'action_taken' ? styles.active : ''}`}
+                    onClick={() => handleStatClick('in_review')}
+                    style={{ '--stat-color': 'var(--status-in-progress)' } as React.CSSProperties}
+                >
+                    <div className={styles.statIcon} style={{ background: 'var(--status-in-progress-bg)' }}>
+                        <svg viewBox="0 0 24 24" fill="var(--status-in-progress)" width="24" height="24">
+                            <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
+                        </svg>
+                    </div>
+                    <div className={styles.statContent}>
+                        <span className={styles.statValue}>{stats.inProgress}</span>
+                        <span className={styles.statLabel}>In Progress</span>
+                    </div>
+                </div>
+
+                <div
+                    className={`${styles.statCard} ${statusFilter === 'resolved' ? styles.active : ''}`}
+                    onClick={() => handleStatClick('resolved')}
+                    style={{ '--stat-color': 'var(--status-resolved)' } as React.CSSProperties}
+                >
+                    <div className={styles.statIcon} style={{ background: 'var(--status-resolved-bg)' }}>
+                        <svg viewBox="0 0 24 24" fill="var(--status-resolved)" width="24" height="24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                        </svg>
+                    </div>
+                    <div className={styles.statContent}>
+                        <span className={styles.statValue}>{stats.resolved}</span>
+                        <span className={styles.statLabel}>Resolved</span>
+                    </div>
+                </div>
+
+                <div
+                    className={`${styles.statCard} ${dateFilter === 'today' ? styles.active : ''}`}
+                    onClick={() => setDateFilter(dateFilter === 'today' ? 'all' : 'today')}
+                    style={{ '--stat-color': '#7c3aed' } as React.CSSProperties}
+                >
+                    <div className={styles.statIcon} style={{ background: '#f3e8ff' }}>
+                        <svg viewBox="0 0 24 24" fill="#7c3aed" width="24" height="24">
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                        </svg>
+                    </div>
+                    <div className={styles.statContent}>
+                        <span className={styles.statValue}>{stats.today}</span>
+                        <span className={styles.statLabel}>Reported Today</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className={styles.filters}>
+                <div className={styles.filterPills}>
+                    <button
+                        className={`${styles.filterPill} ${dateFilter === 'all' ? styles.active : ''}`}
+                        onClick={() => setDateFilter('all')}
+                    >
+                        All Time
+                    </button>
+                    <button
+                        className={`${styles.filterPill} ${dateFilter === 'today' ? styles.active : ''}`}
+                        onClick={() => setDateFilter('today')}
+                    >
+                        Today
+                    </button>
+                    <button
+                        className={`${styles.filterPill} ${dateFilter === 'week' ? styles.active : ''}`}
+                        onClick={() => setDateFilter('week')}
+                    >
+                        This Week
+                    </button>
+                    <button
+                        className={`${styles.filterPill} ${dateFilter === 'month' ? styles.active : ''}`}
+                        onClick={() => setDateFilter('month')}
+                    >
+                        This Month
                     </button>
                 </div>
-            </aside>
 
-            {/* Main Content */}
-            <main className={styles.main}>
-                <header className={styles.header}>
-                    <div>
-                        <h1 className={styles.pageTitle}>Police Dashboard</h1>
-                        <p className={styles.pageSubtitle}>Monitor and manage incident reports</p>
-                    </div>
-                    <div className={styles.headerActions}>
-                        <span className={styles.liveIndicator}>
-                            <span className={styles.liveDot}></span>
-                            Live
-                        </span>
-                    </div>
-                </header>
-
-                {/* Stats Cards */}
-                <div className={styles.statsGrid}>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#E3F2FD' }}>
-                            <svg viewBox="0 0 24 24" fill="#1976D2" width="24" height="24">
-                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.total}</span>
-                            <span className={styles.statLabel}>Total Cases</span>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#FFEBEE' }}>
-                            <svg viewBox="0 0 24 24" fill="#D32F2F" width="24" height="24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.pending}</span>
-                            <span className={styles.statLabel}>Pending</span>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#FFF3E0' }}>
-                            <svg viewBox="0 0 24 24" fill="#F57C00" width="24" height="24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.inProgress}</span>
-                            <span className={styles.statLabel}>In Progress</span>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#E8F5E9' }}>
-                            <svg viewBox="0 0 24 24" fill="#388E3C" width="24" height="24">
-                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.resolved}</span>
-                            <span className={styles.statLabel}>Resolved</span>
-                        </div>
-                    </div>
-                    <div className={styles.statCard}>
-                        <div className={styles.statIcon} style={{ background: '#F3E5F5' }}>
-                            <svg viewBox="0 0 24 24" fill="#7B1FA2" width="24" height="24">
-                                <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <span className={styles.statValue}>{stats.today}</span>
-                            <span className={styles.statLabel}>Today</span>
-                        </div>
-                    </div>
+                <div className={styles.filterGroup}>
+                    <label>Category</label>
+                    <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className={styles.filterSelect}
+                    >
+                        <option value="all">All Categories</option>
+                        {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                    </select>
                 </div>
 
-                {/* Filters */}
-                <div className={styles.filters}>
-                    <div className={styles.filterGroup}>
-                        <label>Status</label>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className={styles.filterSelect}
-                        >
-                            <option value="all">All Status</option>
-                            <option value="submitted">New</option>
-                            <option value="in_review">In Review</option>
-                            <option value="action_taken">Action Taken</option>
-                            <option value="resolved">Resolved</option>
-                        </select>
-                    </div>
-                    <div className={styles.filterGroup}>
-                        <label>Category</label>
-                        <select
-                            value={categoryFilter}
-                            onChange={(e) => setCategoryFilter(e.target.value)}
-                            className={styles.filterSelect}
-                        >
-                            <option value="all">All Categories</option>
-                            {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
+                {hasActiveFilters && (
+                    <button onClick={clearAllFilters} className={styles.clearFilters}>
+                        Clear all filters
+                    </button>
+                )}
+            </div>
 
-                {/* Incidents List */}
-                <section className={styles.incidentsSection}>
+            {/* Incidents List */}
+            <section className={styles.incidentsSection}>
+                <div className={styles.sectionHeader}>
                     <h2 className={styles.sectionTitle}>
                         Recent Incidents
                         <span className={styles.incidentCount}>{incidents.length}</span>
                     </h2>
+                    <Link href="/police/incidents" className={styles.viewAllLink}>
+                        View all →
+                    </Link>
+                </div>
 
-                    {incidents.length === 0 ? (
-                        <div className={styles.emptyState}>
-                            <p>No incidents found</p>
-                        </div>
-                    ) : (
-                        <div className={styles.incidentsList}>
-                            {incidents.map((incident) => {
-                                const statusInfo = getStatusInfo(incident.status);
-                                const priorityBadge = getPriorityBadge(incident.priority);
+                {loading ? (
+                    <div className={styles.loading}>
+                        <div className={styles.spinner}></div>
+                    </div>
+                ) : incidents.length === 0 ? (
+                    <div className={styles.emptyState}>
+                        <svg className={styles.emptyStateIcon} viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                        </svg>
+                        <p className={styles.emptyStateText}>No incidents found</p>
+                        <p className={styles.emptyStateHint}>
+                            {hasActiveFilters
+                                ? 'Try adjusting your filters to see more results'
+                                : 'New incidents will appear here when reported'}
+                        </p>
+                    </div>
+                ) : (
+                    <div className={styles.incidentsList}>
+                        {incidents.map((incident) => {
+                            const statusInfo = getStatusInfo(incident.status);
+                            const priorityBadge = getPriorityBadge(incident.priority);
 
-                                return (
-                                    <Link
-                                        href={`/police/incident/${incident.id}`}
-                                        key={incident.id}
-                                        className={styles.incidentCard}
-                                    >
-                                        <div className={styles.incidentHeader}>
-                                            <div className={styles.incidentMeta}>
-                                                <span className={styles.trackingId}>#{incident.tracking_id}</span>
-                                                {priorityBadge && (
-                                                    <span
-                                                        className={styles.priorityBadge}
-                                                        style={{ color: priorityBadge.color }}
-                                                    >
-                                                        {priorityBadge.label}
-                                                    </span>
-                                                )}
-                                            </div>
+                            return (
+                                <Link
+                                    href={`/police/incident/${incident.id}`}
+                                    key={incident.id}
+                                    className={styles.incidentCard}
+                                >
+                                    <div className={styles.incidentHeader}>
+                                        <div className={styles.incidentMeta}>
+                                            <span className={styles.trackingId}>#{incident.tracking_id}</span>
+                                            {priorityBadge && (
+                                                <span className={`${styles.priorityBadge} ${priorityBadge.className}`}>
+                                                    {priorityBadge.label}
+                                                </span>
+                                            )}
                                             <span
                                                 className={styles.statusBadge}
                                                 style={{
@@ -421,49 +439,74 @@ export default function PoliceDashboardPage() {
                                                 {statusInfo.label}
                                             </span>
                                         </div>
-
-                                        <h3 className={styles.incidentTitle}>{incident.title}</h3>
-
-                                        {incident.description && (
-                                            <p className={styles.incidentDesc}>
-                                                {incident.description.slice(0, 100)}
-                                                {incident.description.length > 100 ? '...' : ''}
-                                            </p>
-                                        )}
-
-                                        <div className={styles.incidentDetails}>
-                                            <span
-                                                className={styles.categoryTag}
-                                                style={{ color: incident.category?.color }}
+                                        <div className={styles.quickActions}>
+                                            <button
+                                                className={styles.quickActionBtn}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    router.push(`/police/incident/${incident.id}`);
+                                                }}
+                                                title="View details"
                                             >
-                                                {incident.category?.name}
-                                            </span>
-                                            {incident.area && (
-                                                <span className={styles.areaTag}>
-                                                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                                                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                                    </svg>
-                                                    {incident.area.name}
-                                                </span>
-                                            )}
+                                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                className={styles.quickActionBtn}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    // TODO: Implement assign functionality
+                                                }}
+                                                title="Assign officer"
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                                    <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                                                </svg>
+                                            </button>
                                         </div>
+                                    </div>
 
-                                        <div className={styles.incidentFooter}>
-                                            <div className={styles.reporter}>
-                                                <div className={styles.reporterAvatar}>
-                                                    {incident.user?.full_name?.charAt(0)}
-                                                </div>
-                                                <span>{incident.user?.full_name}</span>
+                                    <h3 className={styles.incidentTitle}>{incident.title}</h3>
+
+                                    {incident.description && (
+                                        <p className={styles.incidentDesc}>
+                                            {incident.description}
+                                        </p>
+                                    )}
+
+                                    <div className={styles.incidentDetails}>
+                                        <span
+                                            className={styles.categoryTag}
+                                            style={{ color: incident.category?.color }}
+                                        >
+                                            {incident.category?.name}
+                                        </span>
+                                        {incident.area && (
+                                            <span className={styles.areaTag}>
+                                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                                                </svg>
+                                                {incident.area.name}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className={styles.incidentFooter}>
+                                        <div className={styles.reporter}>
+                                            <div className={styles.reporterAvatar}>
+                                                {incident.user?.full_name?.charAt(0)}
                                             </div>
-                                            <span className={styles.timeAgo}>{formatTimeAgo(incident.created_at)}</span>
+                                            <span>{incident.user?.full_name}</span>
                                         </div>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    )}
-                </section>
-            </main>
-        </div>
+                                        <span className={styles.timeAgo}>{formatTimeAgo(incident.created_at)}</span>
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                )}
+            </section>
+        </>
     );
 }
