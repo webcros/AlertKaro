@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -51,6 +51,14 @@ interface Update {
     };
 }
 
+interface Resolution {
+    id: string;
+    resolution_media_url: string;
+    resolution_media_type: string;
+    notes: string | null;
+    created_at: string;
+}
+
 export default function PoliceIncidentDetailPage() {
     const router = useRouter();
     const params = useParams();
@@ -61,11 +69,15 @@ export default function PoliceIncidentDetailPage() {
     const [incident, setIncident] = useState<Incident | null>(null);
     const [media, setMedia] = useState<Media[]>([]);
     const [updates, setUpdates] = useState<Update[]>([]);
+    const [resolution, setResolution] = useState<Resolution | null>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [newStatus, setNewStatus] = useState('');
     const [updateNotes, setUpdateNotes] = useState('');
     const [showUpdateModal, setShowUpdateModal] = useState(false);
+    const [resolutionFile, setResolutionFile] = useState<File | null>(null);
+    const [resolutionPreview, setResolutionPreview] = useState<string | null>(null);
+    const resolutionInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         async function loadData() {
@@ -126,11 +138,47 @@ export default function PoliceIncidentDetailPage() {
 
             if (updatesData) setUpdates(updatesData as unknown as Update[]);
 
+            // Load existing resolution
+            const { data: resolutionData } = await supabase
+                .from('incident_resolutions')
+                .select('*')
+                .eq('incident_id', incidentId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (resolutionData) setResolution(resolutionData as Resolution);
+
             setLoading(false);
         }
 
         loadData();
     }, [incidentId, supabase, router]);
+
+    const handleResolutionFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        if (!isImage && !isVideo) return;
+        if (file.size > 50 * 1024 * 1024) return; // 50MB limit
+
+        setResolutionFile(file);
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            setResolutionPreview(ev.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const removeResolutionFile = () => {
+        setResolutionFile(null);
+        setResolutionPreview(null);
+        if (resolutionInputRef.current) {
+            resolutionInputRef.current.value = '';
+        }
+    };
 
     const handleUpdateStatus = async () => {
         if (!profile || !incident) return;
@@ -138,14 +186,53 @@ export default function PoliceIncidentDetailPage() {
         setUpdating(true);
 
         try {
+            // If resolving and a resolution file is provided, upload it
+            if (newStatus === 'resolved' && resolutionFile) {
+                const fileExt = resolutionFile.name.split('.').pop();
+                const fileName = `resolutions/${incident.id}/${Date.now()}.${fileExt}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('incident-media')
+                    .upload(fileName, resolutionFile);
+
+                if (uploadError) {
+                    console.error('Upload error:', uploadError);
+                } else {
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('incident-media')
+                        .getPublicUrl(fileName);
+
+                    const { data: resData } = await supabase
+                        .from('incident_resolutions')
+                        .insert({
+                            incident_id: incident.id,
+                            resolution_media_url: publicUrl,
+                            resolution_media_type: resolutionFile.type.startsWith('video/') ? 'video' : 'image',
+                            notes: updateNotes || null,
+                            uploaded_by: profile.id,
+                        })
+                        .select()
+                        .single();
+
+                    if (resData) {
+                        setResolution(resData as Resolution);
+                    }
+                }
+            }
+
             // Update incident status
-            await supabase
+            const { error: updateError } = await supabase
                 .from('incidents')
                 .update({ status: newStatus })
                 .eq('id', incident.id);
 
+            if (updateError) {
+                console.error('Error updating incident status:', updateError);
+                throw updateError;
+            }
+
             // Create update record
-            const { data: updateData } = await supabase
+            const { data: updateData, error: updateRecordError } = await supabase
                 .from('incident_updates')
                 .insert({
                     incident_id: incident.id,
@@ -156,13 +243,47 @@ export default function PoliceIncidentDetailPage() {
                 .select(`*, updated_by:profiles(full_name)`)
                 .single();
 
+            if (updateRecordError) {
+                console.error('Error creating update record:', updateRecordError);
+                throw updateRecordError;
+            }
+
             if (updateData) {
                 setUpdates(prev => [updateData as unknown as Update, ...prev]);
+            }
+
+            // Create notification for the user
+            if (incident.user?.id) {
+                const statusLabels: Record<string, string> = {
+                    'in_review': 'Under Review',
+                    'action_taken': 'Action Taken',
+                    'resolved': 'Resolved'
+                };
+
+                const notificationTitle = statusLabels[newStatus] || 'Status Updated';
+                const notificationMessage = newStatus === 'resolved'
+                    ? `Your incident "${incident.title}" has been resolved.`
+                    : `Your incident "${incident.title}" status has been updated to ${statusLabels[newStatus] || newStatus}.`;
+
+                await supabase.from('notifications').insert({
+                    user_id: incident.user.id,
+                    incident_id: incident.id,
+                    type: 'status_change',
+                    title: notificationTitle,
+                    message: notificationMessage,
+                    metadata: {
+                        old_status: incident.status,
+                        new_status: newStatus,
+                        tracking_id: incident.tracking_id
+                    }
+                });
             }
 
             setIncident(prev => prev ? { ...prev, status: newStatus } : null);
             setShowUpdateModal(false);
             setUpdateNotes('');
+            setResolutionFile(null);
+            setResolutionPreview(null);
         } catch (error) {
             console.error('Error updating status:', error);
         } finally {
@@ -355,6 +476,28 @@ export default function PoliceIncidentDetailPage() {
                                 </div>
                             </div>
                         )}
+
+                        {/* Resolution Media Card */}
+                        {resolution && (
+                            <div className={styles.card}>
+                                <h2 className={styles.cardTitle}>Resolution Evidence</h2>
+                                <div className={styles.resolutionMedia}>
+                                    {resolution.resolution_media_type === 'video' ? (
+                                        <video
+                                            src={resolution.resolution_media_url}
+                                            controls
+                                            className={styles.resolutionMediaContent}
+                                        />
+                                    ) : (
+                                        <img
+                                            src={resolution.resolution_media_url}
+                                            alt="Resolution"
+                                            className={styles.resolutionMediaContent}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Right Column - Actions & Updates */}
@@ -459,6 +602,49 @@ export default function PoliceIncidentDetailPage() {
                                 rows={4}
                             />
                         </div>
+
+                        {/* Resolution upload when resolving */}
+                        {newStatus === 'resolved' && !resolution && (
+                            <div className={styles.uploadSection}>
+                                <label className={styles.uploadLabel}>Resolution Evidence (Photo/Video)</label>
+                                {!resolutionPreview ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => resolutionInputRef.current?.click()}
+                                        className={styles.uploadDropzone}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32">
+                                            <path d="M19 7v2.99s-1.99.01-2 0V7h-3s.01-1.99 0-2h3V2h2v3h3v2h-3zm-3 4V8h-3V5H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8h-3zM5 19l3-4 2 3 3-4 4 5H5z" />
+                                        </svg>
+                                        <span>Upload resolution photo or video</span>
+                                    </button>
+                                ) : (
+                                    <div className={styles.uploadPreview}>
+                                        {resolutionFile?.type.startsWith('video/') ? (
+                                            <video src={resolutionPreview} className={styles.uploadPreviewMedia} controls />
+                                        ) : (
+                                            <img src={resolutionPreview} alt="Resolution preview" className={styles.uploadPreviewMedia} />
+                                        )}
+                                        <button
+                                            onClick={removeResolutionFile}
+                                            className={styles.removeUpload}
+                                            type="button"
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                )}
+                                <input
+                                    ref={resolutionInputRef}
+                                    type="file"
+                                    accept="image/*,video/*"
+                                    onChange={handleResolutionFileSelect}
+                                    className={styles.hiddenInput}
+                                />
+                            </div>
+                        )}
 
                         <div className={styles.modalActions}>
                             <button

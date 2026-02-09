@@ -259,6 +259,22 @@ export default function DashboardPage() {
                     </div>
                 </Link>
 
+                {/* Public Feed CTA */}
+                <Link href="/feed" className={styles.feedCta}>
+                    <div className={styles.feedCtaIcon}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 className={styles.feedCtaTitle}>Public Feed</h3>
+                        <p className={styles.feedCtaSubtitle}>See how incidents are being resolved</p>
+                    </div>
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" className={styles.feedCtaArrow}>
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                    </svg>
+                </Link>
+
                 {/* Active Reports Section */}
                 <section className={styles.section}>
                     <div className={styles.sectionHeader}>
