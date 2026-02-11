@@ -3,48 +3,48 @@
 /* CSS Variables */
 :root {
   /* Primary Colors */
-  --primary: #D32F2F;
-  --primary-dark: #B71C1C;
-  --primary-light: #FF5252;
-  
+  --primary: #d32f2f;
+  --primary-dark: #b71c1c;
+  --primary-light: #ff5252;
+
   /* Secondary Colors */
-  --secondary: #1565C0;
-  --secondary-dark: #0D47A1;
-  --secondary-light: #42A5F5;
-  
+  --secondary: #1565c0;
+  --secondary-dark: #0d47a1;
+  --secondary-light: #42a5f5;
+
   /* Status Colors */
   --status-submitted: #757575;
-  --status-in-review: #FF9800;
-  --status-action-taken: #2196F3;
-  --status-resolved: #4CAF50;
-  
+  --status-in-review: #ff9800;
+  --status-action-taken: #2196f3;
+  --status-resolved: #4caf50;
+
   /* Neutral Colors */
-  --background: #FFFFFF;
-  --background-secondary: #F5F5F5;
-  --surface: #FFFFFF;
-  --text-primary: #1A1A1A;
+  --background: #ffffff;
+  --background-secondary: #f5f5f5;
+  --surface: #ffffff;
+  --text-primary: #1a1a1a;
   --text-secondary: #757575;
-  --text-tertiary: #9E9E9E;
-  --border: #E0E0E0;
-  --border-light: #F0F0F0;
-  
+  --text-tertiary: #9e9e9e;
+  --border: #e0e0e0;
+  --border-light: #f0f0f0;
+
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
-  --gradient-header: linear-gradient(180deg, #D32F2F 0%, #C62828 100%);
-  
+  --gradient-primary: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+  --gradient-header: linear-gradient(180deg, #d32f2f 0%, #c62828 100%);
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
-  
+
   /* Border Radius */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 9999px;
-  
+
   /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -52,9 +52,11 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
-  
+
   /* Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
@@ -62,7 +64,7 @@
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 2rem;
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
@@ -107,12 +109,15 @@ button {
   background: none;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
   font-size: inherit;
 }
 
-img, video {
+img,
+video {
   max-width: 100%;
   height: auto;
   display: block;
@@ -124,6 +129,13 @@ img, video {
   max-width: 480px;
   margin: 0 auto;
   padding: 0 var(--spacing-md);
+}
+
+/* Desktop sidebar offset */
+@media (min-width: 1024px) {
+  .container {
+    max-width: 800px;
+  }
 }
 
 .sr-only {
@@ -245,7 +257,9 @@ img, video {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-md);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
   outline: none;
 }
 
@@ -292,7 +306,7 @@ img, video {
 
 .badge-in-progress {
   background: rgba(255, 152, 0, 0.1);
-  color: #F57C00;
+  color: #f57c00;
   border: 1px solid rgba(255, 152, 0, 0.3);
 }
 
@@ -361,7 +375,9 @@ img, video {
   color: white;
   margin-top: -28px;
   box-shadow: var(--shadow-lg);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .bottom-nav-camera:hover {
@@ -400,7 +416,7 @@ img, video {
 }
 
 .progress-bar-fill.in-progress {
-  background: #F57C00;
+  background: #f57c00;
   width: 50%;
 }
 
@@ -528,7 +544,8 @@ img, video {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -616,7 +633,9 @@ img, video {
 .page-enter-active {
   opacity: 1;
   transform: translateX(0);
-  transition: opacity 300ms, transform 300ms;
+  transition:
+    opacity 300ms,
+    transform 300ms;
 }
 
 /* Mobile Optimizations */

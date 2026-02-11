@@ -1,0 +1,361 @@
+/* Skeleton Primitives */
+.skeleton {
+  background: linear-gradient(90deg, #e8e8e8 0%, #f5f5f5 50%, #e8e8e8 100%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeletonLight {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Skeleton shapes */
+.circle {
+  border-radius: 50%;
+}
+
+.rounded {
+  border-radius: var(--radius-md);
+}
+
+.pill {
+  border-radius: var(--radius-full);
+}
+
+.block {
+  border-radius: var(--radius-sm);
+}
+
+/* === Dashboard Skeleton === */
+.dashboardHeader {
+  background: var(--gradient-header);
+  color: white;
+  padding: var(--spacing-lg);
+  padding-top: calc(var(--spacing-lg) + env(safe-area-inset-top, 0px));
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.dashboardHeaderContent {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.dashboardHeaderTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-lg);
+}
+
+.dashboardGreeting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.dashboardStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+}
+
+.dashboardStatCard {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.dashboardContent {
+  padding: var(--spacing-md);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.dashboardCtaSkeleton {
+  border-radius: var(--radius-lg);
+  height: 80px;
+  margin-bottom: var(--spacing-lg);
+}
+
+.dashboardFeedSkeleton {
+  border-radius: var(--radius-md);
+  height: 60px;
+  background: white;
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.dashboardSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.dashboardReportCard {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  margin-bottom: var(--spacing-md);
+}
+
+.dashboardReportCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.dashboardReportInfo {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: flex-start;
+}
+
+/* === History Skeleton === */
+.historyHeader {
+  padding: var(--spacing-lg);
+  padding-top: calc(var(--spacing-lg) + env(safe-area-inset-top, 0px));
+  background: white;
+}
+
+.historyFilterTabs {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: white;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.historyContent {
+  padding: var(--spacing-md);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.historyCard {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.historyCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+}
+
+.historyCardMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* === Alerts Skeleton === */
+.alertsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  padding-top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
+  background: white;
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.alertsContent {
+  flex: 1;
+  padding: var(--spacing-md);
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.alertCard {
+  display: flex;
+  gap: var(--spacing-md);
+  background: white;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid var(--border-light);
+  align-items: flex-start;
+}
+
+.alertCardContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.alertCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+/* === Profile Skeleton === */
+.profileHeader {
+  background: var(--gradient-header);
+  color: white;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  padding-top: calc(var(--spacing-xl) + env(safe-area-inset-top, 0px));
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profileStatsRow {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-lg);
+  margin-top: var(--spacing-lg);
+}
+
+.profileStat {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.profileStatDivider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.3);
+  height: 32px;
+}
+
+.profileContent {
+  padding: var(--spacing-md);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.profileSection {
+  margin-bottom: var(--spacing-lg);
+}
+
+.profileInfoCard {
+  background: white;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.profileInfoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.profileInfoRow:last-child {
+  border-bottom: none;
+}
+
+.profileMenuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.profileMenuItem:last-child {
+  border-bottom: none;
+}
+
+/* === Incident Detail Skeleton === */
+.incidentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  padding-top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
+  background: white;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.incidentContent {
+  padding: var(--spacing-md);
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.incidentTrackingCard {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.incidentProgressSection {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.incidentProgressSteps {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--spacing-sm);
+}
+
+.incidentSection {
+  margin-bottom: var(--spacing-md);
+}
+
+.incidentDetailCard {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.incidentDetailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.incidentDetailRow:last-child {
+  border-bottom: none;
+}

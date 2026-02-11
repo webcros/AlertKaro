@@ -220,18 +220,8 @@ export default function PoliceIncidentDetailPage() {
                 }
             }
 
-            // Update incident status
-            const { error: updateError } = await supabase
-                .from('incidents')
-                .update({ status: newStatus })
-                .eq('id', incident.id);
-
-            if (updateError) {
-                console.error('Error updating incident status:', updateError);
-                throw updateError;
-            }
-
-            // Create update record
+            // Insert update record — sync_incident_status trigger auto-updates
+            // incidents.status AND notify_status_change trigger creates the notification
             const { data: updateData, error: updateRecordError } = await supabase
                 .from('incident_updates')
                 .insert({
@@ -252,32 +242,8 @@ export default function PoliceIncidentDetailPage() {
                 setUpdates(prev => [updateData as unknown as Update, ...prev]);
             }
 
-            // Create notification for the user
-            if (incident.user?.id) {
-                const statusLabels: Record<string, string> = {
-                    'in_review': 'Under Review',
-                    'action_taken': 'Action Taken',
-                    'resolved': 'Resolved'
-                };
-
-                const notificationTitle = statusLabels[newStatus] || 'Status Updated';
-                const notificationMessage = newStatus === 'resolved'
-                    ? `Your incident "${incident.title}" has been resolved.`
-                    : `Your incident "${incident.title}" status has been updated to ${statusLabels[newStatus] || newStatus}.`;
-
-                await supabase.from('notifications').insert({
-                    user_id: incident.user.id,
-                    incident_id: incident.id,
-                    type: 'status_change',
-                    title: notificationTitle,
-                    message: notificationMessage,
-                    metadata: {
-                        old_status: incident.status,
-                        new_status: newStatus,
-                        tracking_id: incident.tracking_id
-                    }
-                });
-            }
+            // Notification is auto-created by DB trigger (notify_status_change)
+            // when incidents.status is updated via sync_incident_status trigger
 
             setIncident(prev => prev ? { ...prev, status: newStatus } : null);
             setShowUpdateModal(false);
