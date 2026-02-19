@@ -50,6 +50,15 @@ export default function ReportPage() {
   const [showCamera, setShowCamera] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Video recording state
+  const [showVideoRecorder, setShowVideoRecorder] = useState(false);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const videoRecorderRef = useRef<HTMLVideoElement>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
   // Load Leaflet CSS and JS
   useEffect(() => {
@@ -311,6 +320,83 @@ export default function ReportPage() {
     setShowCamera(false);
   };
 
+  // Attach video recorder stream to video element
+  useEffect(() => {
+    if (showVideoRecorder && videoStream && videoRecorderRef.current) {
+      videoRecorderRef.current.srcObject = videoStream;
+    }
+  }, [showVideoRecorder, videoStream]);
+
+  // Start video recording
+  const startVideoRecording = async () => {
+    try {
+      const vs = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: true,
+      });
+      setVideoStream(vs);
+      setShowVideoRecorder(true);
+
+      const chunks: BlobPart[] = [];
+      const recorder = new MediaRecorder(vs);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/mp4" });
+        const file = new File([blob], `video_${Date.now()}.mp4`, { type: "video/mp4" });
+        const url = URL.createObjectURL(blob);
+        setMediaFiles((prev) => [...prev, file]);
+        setMediaPreviews((prev) => [...prev, url]);
+        vs.getTracks().forEach((t) => t.stop());
+        setVideoStream(null);
+        setShowVideoRecorder(false);
+        setIsRecording(false);
+        setRecordingTime(0);
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        setStep("details");
+      };
+      setMediaRecorder(recorder);
+      recorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((t) => t + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Video recorder error:", err);
+    }
+  };
+
+  // Stop video recording
+  const stopVideoRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
+    }
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+  };
+
+  // Cancel video recording
+  const cancelVideoRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.ondataavailable = null;
+      mediaRecorder.onstop = null;
+      mediaRecorder.stop();
+    }
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    if (videoStream) videoStream.getTracks().forEach((t) => t.stop());
+    setVideoStream(null);
+    setShowVideoRecorder(false);
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  const formatRecordingTime = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, "0");
+    const s = (secs % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
   // Remove media
   const removeMedia = (index: number) => {
     setMediaFiles((prev) => prev.filter((_, i) => i !== index));
@@ -459,6 +545,43 @@ export default function ReportPage() {
     );
   }
 
+  // Video recorder view
+  if (showVideoRecorder) {
+    return (
+      <main className={styles.cameraPage}>
+        <video
+          ref={videoRecorderRef}
+          autoPlay
+          playsInline
+          muted
+          className={styles.cameraVideo}
+        />
+
+        <div className={styles.cameraOverlay}>
+          <button onClick={cancelVideoRecording} className={styles.closeCamera}>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+            </svg>
+          </button>
+
+          {isRecording && (
+            <div className={styles.recBadge}>
+              <span className={styles.recDot} />
+              REC {formatRecordingTime(recordingTime)}
+            </div>
+          )}
+
+          <div className={styles.cameraControls}>
+            <button onClick={stopVideoRecording} className={styles.stopRecordButton}>
+              <span className={styles.stopRecordInner} />
+            </button>
+            <span className={styles.stopRecordLabel}>Tap to stop</span>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className={styles.page}>
       {/* Header */}
@@ -506,7 +629,7 @@ export default function ReportPage() {
               </button>
 
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={startVideoRecording}
                 className={styles.captureOption}
               >
                 <svg
@@ -515,9 +638,9 @@ export default function ReportPage() {
                   width="24"
                   height="24"
                 >
-                  <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+                  <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
                 </svg>
-                <span>Upload from Gallery</span>
+                <span>Record Video</span>
               </button>
             </div>
 
@@ -554,19 +677,58 @@ export default function ReportPage() {
                     </button>
                   </div>
                 ))}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className={styles.addMoreMedia}
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    width="24"
-                    height="24"
+                <div className={styles.addMoreWrapper}>
+                  <button
+                    onClick={() => setShowAddMenu((v) => !v)}
+                    className={styles.addMoreMedia}
                   >
-                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                  </svg>
-                </button>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      width="24"
+                      height="24"
+                    >
+                      <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                    </svg>
+                  </button>
+
+                  {showAddMenu && (
+                    <>
+                      {/* Backdrop to close menu */}
+                      <div
+                        className={styles.addMenuBackdrop}
+                        onClick={() => setShowAddMenu(false)}
+                      />
+                      <div className={styles.addMenu}>
+                        <button
+                          className={styles.addMenuItem}
+                          onClick={() => {
+                            setShowAddMenu(false);
+                            startCamera();
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                            <circle cx="12" cy="12" r="3.2" />
+                            <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z" />
+                          </svg>
+                          <span>Take Photo</span>
+                        </button>
+                        <button
+                          className={styles.addMenuItem}
+                          onClick={() => {
+                            setShowAddMenu(false);
+                            startVideoRecording();
+                          }}
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+                          </svg>
+                          <span>Record Video</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -578,11 +740,10 @@ export default function ReportPage() {
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}
-                    className={`${styles.categoryCard} ${
-                      selectedCategory === category.id
-                        ? styles.categorySelected
-                        : ""
-                    }`}
+                    className={`${styles.categoryCard} ${selectedCategory === category.id
+                      ? styles.categorySelected
+                      : ""
+                      }`}
                     style={
                       {
                         "--category-color": category.color,

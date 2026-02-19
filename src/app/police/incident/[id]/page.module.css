@@ -225,6 +225,7 @@
 }
 
 .mediaItem {
+  position: relative;
   aspect-ratio: 4/3;
   border-radius: 0.5rem;
   overflow: hidden;
@@ -235,6 +236,23 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.videoTypeBadge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
 }
 
 /* Reporter */
