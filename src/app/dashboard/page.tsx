@@ -14,19 +14,17 @@ interface Profile {
   avatar_url: string | null;
 }
 
-interface Incident {
+interface FeedIncident {
   id: string;
-  tracking_id: string;
   title: string;
   status: string;
-  address: string;
+  address: string | null;
   created_at: string;
-  updated_at: string;
   category: {
     name: string;
     icon: string;
     color: string;
-  };
+  } | null;
 }
 
 interface Stats {
@@ -40,7 +38,7 @@ export default function DashboardPage() {
   const supabase = createClient();
 
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [feedIncidents, setFeedIncidents] = useState<FeedIncident[]>([]);
   const [stats, setStats] = useState<Stats>({
     active: 0,
     resolved: 0,
@@ -74,63 +72,62 @@ export default function DashboardPage() {
 
         setProfile(profileData);
 
-        // Load incidents with category
-        const { data: incidentData } = await supabase
+        // Get user stats
+        const { count: totalActive } = await supabase
           .from("incidents")
-          .select(
-            `
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .in("status", ["submitted", "in_review", "action_taken"]);
+
+        const { count: totalResolved } = await supabase
+          .from("incidents")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("status", "resolved");
+
+        const { count: totalPending } = await supabase
+          .from("incidents")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("status", "submitted");
+
+        setStats({
+          active: totalActive || 0,
+          resolved: totalResolved || 0,
+          pending: totalPending || 0,
+        });
+
+        // Load public feed: last 48 hours, fallback to latest 10
+        const fortyEightHoursAgo = new Date(
+          Date.now() - 48 * 60 * 60 * 1000,
+        ).toISOString();
+
+        const feedSelect = `
             id,
-            tracking_id,
             title,
             status,
             address,
             created_at,
-            updated_at,
             category:categories(name, icon, color)
-          `,
-          )
-          .eq("user_id", user.id)
+          `;
+
+        const { data: recentData } = await supabase
+          .from("incidents")
+          .select(feedSelect)
+          .gte("created_at", fortyEightHoursAgo)
           .order("created_at", { ascending: false })
-          .limit(5);
+          .limit(50);
 
-        if (incidentData) {
-          setIncidents(incidentData as unknown as Incident[]);
-
-          // Calculate stats
-          const active = incidentData.filter((i) =>
-            ["submitted", "in_review", "action_taken"].includes(i.status),
-          ).length;
-          const resolved = incidentData.filter(
-            (i) => i.status === "resolved",
-          ).length;
-          const pending = incidentData.filter(
-            (i) => i.status === "submitted",
-          ).length;
-
-          // Get total counts
-          const { count: totalActive } = await supabase
+        if (recentData && recentData.length >= 10) {
+          setFeedIncidents(recentData as unknown as FeedIncident[]);
+        } else {
+          const { data: latestData } = await supabase
             .from("incidents")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", user.id)
-            .in("status", ["submitted", "in_review", "action_taken"]);
+            .select(feedSelect)
+            .order("created_at", { ascending: false })
+            .limit(10);
 
-          const { count: totalResolved } = await supabase
-            .from("incidents")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", user.id)
-            .eq("status", "resolved");
-
-          const { count: totalPending } = await supabase
-            .from("incidents")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", user.id)
-            .eq("status", "submitted");
-
-          setStats({
-            active: totalActive || 0,
-            resolved: totalResolved || 0,
-            pending: totalPending || 0,
-          });
+          setFeedIncidents((latestData as unknown as FeedIncident[]) || []);
         }
       } catch (error) {
         console.error("Error loading data:", error);
@@ -304,48 +301,19 @@ export default function DashboardPage() {
               </svg>
             </div>
           </Link>
-
-          {/* Public Feed CTA */}
-          <Link href="/feed" className={styles.feedCta}>
-            <div className={styles.feedCtaIcon}>
-              <svg
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                width="22"
-                height="22"
-              >
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-              </svg>
-            </div>
-            <div>
-              <h3 className={styles.feedCtaTitle}>Public Feed</h3>
-              <p className={styles.feedCtaSubtitle}>
-                See how incidents are being resolved
-              </p>
-            </div>
-            <svg
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              width="20"
-              height="20"
-              className={styles.feedCtaArrow}
-            >
-              <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
-            </svg>
-          </Link>
         </div>
         {/* end quickActions */}
 
-        {/* Active Reports Section */}
+        {/* Public Feed Section */}
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>My Active Reports</h2>
-            <Link href="/history" className={styles.viewAllLink}>
+            <h2 className={styles.sectionTitle}>Public Feed</h2>
+            <Link href="/feed" className={styles.viewAllLink}>
               View All
             </Link>
           </div>
 
-          {incidents.length === 0 ? (
+          {feedIncidents.length === 0 ? (
             <div className={styles.emptyState}>
               <svg viewBox="0 0 24 24" fill="none" className={styles.emptyIcon}>
                 <path
@@ -353,12 +321,12 @@ export default function DashboardPage() {
                   fill="currentColor"
                 />
               </svg>
-              <p>No reports yet</p>
-              <span>Start by reporting an incident in your area</span>
+              <p>No incidents yet</p>
+              <span>Community reports will appear here</span>
             </div>
           ) : (
             <div className={styles.reportsList}>
-              {incidents.map((incident) => (
+              {feedIncidents.map((incident) => (
                 <Link
                   href={`/incident/${incident.id}`}
                   key={incident.id}
@@ -373,13 +341,13 @@ export default function DashboardPage() {
                         }}
                       >
                         <span style={{ color: incident.category?.color }}>
-                          {getCategoryIcon(incident.category?.icon)}
+                          {getCategoryIcon(incident.category?.icon ?? "")}
                         </span>
                       </div>
                       <div>
                         <h3 className={styles.reportTitle}>{incident.title}</h3>
                         <p className={styles.reportId}>
-                          ID: #{incident.tracking_id}
+                          {incident.category?.name}
                         </p>
                       </div>
                     </div>
@@ -404,15 +372,9 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  <div className={styles.progressBar}>
-                    <div
-                      className={`${styles.progressFill} ${styles[incident.status.replace("_", "-")]}`}
-                    />
-                  </div>
-
                   <div className={styles.reportFooter}>
                     <span className={styles.reportTime}>
-                      Updated {formatTimeAgo(incident.updated_at)}
+                      {formatTimeAgo(incident.created_at)}
                     </span>
                   </div>
                 </Link>

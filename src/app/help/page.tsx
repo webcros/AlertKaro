@@ -33,7 +33,7 @@ const faqs = [
   {
     question: "How do I delete my account?",
     answer:
-      "Contact our support team at support@alerkaro.app with your registered email and we will process your deletion request within 7 business days.",
+      "Contact our support team at alertkaro.tech@gmail.com with your registered email and we will process your deletion request within 7 business days.",
   },
 ];
 
@@ -60,7 +60,7 @@ export default function HelpSupportPage() {
           <h2 className={styles.sectionTitle}>Get in Touch</h2>
           <div className={styles.contactGrid}>
             <a
-              href="mailto:support@alerkaro.app"
+              href="mailto:alertkaro.tech@gmail.com"
               className={styles.contactCard}
             >
               <div className={styles.contactIcon}>
@@ -74,9 +74,9 @@ export default function HelpSupportPage() {
                 </svg>
               </div>
               <p className={styles.contactLabel}>Email Us</p>
-              <p className={styles.contactValue}>support@alerkaro.app</p>
+              <p className={styles.contactValue}>alertkaro.tech@gmail.com</p>
             </a>
-            <a href="tel:+254700000000" className={styles.contactCard}>
+            <a href="tel:+919620991003" className={styles.contactCard}>
               <div className={styles.contactIcon}>
                 <svg
                   viewBox="0 0 24 24"
@@ -88,7 +88,7 @@ export default function HelpSupportPage() {
                 </svg>
               </div>
               <p className={styles.contactLabel}>Call Us</p>
-              <p className={styles.contactValue}>+254 700 000 000</p>
+              <p className={styles.contactValue}>+91 96209 91003</p>
             </a>
           </div>
         </section>

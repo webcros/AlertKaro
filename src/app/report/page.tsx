@@ -45,6 +45,8 @@ export default function ReportPage() {
   const [location, setLocation] = useState<LocationData | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState("");
+  const [showManualLocation, setShowManualLocation] = useState(false);
+  const [manualAddress, setManualAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showCamera, setShowCamera] = useState(false);
@@ -806,38 +808,121 @@ export default function ReportPage() {
                     <span>Getting your location...</span>
                   </div>
                 ) : locationError ? (
-                  <div className={styles.locationError}>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      width="20"
-                      height="20"
-                    >
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                    </svg>
-                    <span>{locationError}</span>
+                  <div className={styles.locationErrorState}>
+                    <div className={styles.locationError}>
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        width="20"
+                        height="20"
+                      >
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                      </svg>
+                      <span className={styles.locationErrorMsg}>{locationError}</span>
+                    </div>
+                    <div className={styles.locationErrorActions}>
+                      <button
+                        onClick={() => {
+                          setLocationError("");
+                          setShowManualLocation(false);
+                          getLocation();
+                        }}
+                        className={styles.retryButton}
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                          <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                        </svg>
+                        Retry GPS
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowManualLocation(true);
+                          setLocationError("");
+                        }}
+                        className={styles.manualLocationButton}
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                        </svg>
+                        Enter Manually
+                      </button>
+                    </div>
+                  </div>
+                ) : showManualLocation ? (
+                  <div className={styles.manualLocationContainer}>
+                    <div className={styles.manualLocationHeader}>
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                      </svg>
+                      <span>Enter your location manually</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={manualAddress}
+                      onChange={(e) => setManualAddress(e.target.value)}
+                      placeholder="e.g. 123 Main Street, City, State"
+                      className={styles.manualAddressInput}
+                      autoFocus
+                    />
+                    <div className={styles.manualLocationActions}>
+                      <button
+                        onClick={() => {
+                          setShowManualLocation(false);
+                          setManualAddress("");
+                        }}
+                        className={styles.manualCancelButton}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (manualAddress.trim()) {
+                            setLocation({
+                              latitude: 0,
+                              longitude: 0,
+                              address: manualAddress.trim(),
+                            });
+                            setShowManualLocation(false);
+                            setManualAddress("");
+                          }
+                        }}
+                        disabled={!manualAddress.trim()}
+                        className={styles.manualConfirmButton}
+                      >
+                        Use This Location
+                      </button>
+                    </div>
                     <button
-                      onClick={getLocation}
-                      className={styles.retryButton}
+                      onClick={() => {
+                        setShowManualLocation(false);
+                        setManualAddress("");
+                        getLocation();
+                      }}
+                      className={styles.tryGpsAgainButton}
                     >
-                      Retry
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z" />
+                      </svg>
+                      Try GPS instead
                     </button>
                   </div>
                 ) : location ? (
                   <>
-                    {/* Map Preview */}
-                    <div className={styles.locationMapContainer}>
-                      <div
-                        ref={locationMapRef}
-                        className={styles.locationMap}
-                      ></div>
-                      <div className={styles.mapOverlay}>
-                        <span className={styles.coordinatesBadge}>
-                          {location.latitude.toFixed(6)},{" "}
-                          {location.longitude.toFixed(6)}
-                        </span>
+                    {/* Map Preview – only for GPS locations (lat/lng != 0) */}
+                    {location.latitude !== 0 && location.longitude !== 0 && (
+                      <div className={styles.locationMapContainer}>
+                        <div
+                          ref={locationMapRef}
+                          className={styles.locationMap}
+                        ></div>
+                        <div className={styles.mapOverlay}>
+                          <span className={styles.coordinatesBadge}>
+                            {location.latitude.toFixed(6)},{" "}
+                            {location.longitude.toFixed(6)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     {/* Address */}
                     <div className={styles.locationSuccess}>
                       <svg
@@ -852,20 +937,41 @@ export default function ReportPage() {
                         {location.address}
                       </span>
                     </div>
-                    <button
-                      onClick={getLocation}
-                      className={styles.refreshLocationButton}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        width="16"
-                        height="16"
+                    {location.latitude !== 0 && location.longitude !== 0 ? (
+                      <button
+                        onClick={getLocation}
+                        className={styles.refreshLocationButton}
                       >
-                        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
-                      </svg>
-                      Refresh Location
-                    </button>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          width="16"
+                          height="16"
+                        >
+                          <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                        </svg>
+                        Refresh Location
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setLocation(null);
+                          setManualAddress(location.address);
+                          setShowManualLocation(true);
+                        }}
+                        className={styles.refreshLocationButton}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          width="16"
+                          height="16"
+                        >
+                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                        </svg>
+                        Edit Address
+                      </button>
+                    )}
                   </>
                 ) : (
                   <button

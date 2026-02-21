@@ -157,8 +157,8 @@ export default function PrivacyPage() {
           <div className={styles.card}>
             <p className={styles.paragraph}>
               For any privacy-related concerns, reach us at{" "}
-              <a href="mailto:privacy@alerkaro.app" className={styles.link}>
-                privacy@alerkaro.app
+              <a href="mailto:alertkaro.tech@gmail.com" className={styles.link}>
+                alertkaro.tech@gmail.com
               </a>
             </p>
           </div>
