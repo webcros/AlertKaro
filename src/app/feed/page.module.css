@@ -203,6 +203,9 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+  display: block;
+  text-decoration: none;
+  color: inherit;
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast);

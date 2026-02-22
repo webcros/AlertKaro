@@ -25,6 +25,16 @@ interface FeedIncident {
     icon: string;
     color: string;
   } | null;
+  incident_media: {
+    id: string;
+    file_url: string;
+    file_type: string;
+  }[];
+  incident_resolutions: {
+    id: string;
+    resolution_media_url: string;
+    resolution_media_type: string;
+  }[];
 }
 
 interface Stats {
@@ -108,7 +118,9 @@ export default function DashboardPage() {
             status,
             address,
             created_at,
-            category:categories(name, icon, color)
+            category:categories(name, icon, color),
+            incident_media(id, file_url, file_type),
+            incident_resolutions(id, resolution_media_url, resolution_media_type)
           `;
 
         const { data: recentData } = await supabase
@@ -152,6 +164,39 @@ export default function DashboardPage() {
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
     return then.toLocaleDateString();
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case "submitted":
+        return { label: "Reported", color: "#757575" };
+      case "in_review":
+        return { label: "In Progress", color: "#F57C00" };
+      case "action_taken":
+        return { label: "Action Taken", color: "#1976D2" };
+      case "resolved":
+        return { label: "Resolved", color: "#388E3C" };
+      default:
+        return { label: status, color: "#757575" };
+    }
+  };
+
+  const parseLocation = (address: string | null): string => {
+    if (!address) return "Location not available";
+    const parts = address.split(",").map((p) => p.trim());
+    if (parts.length >= 3) return `${parts[1]}, ${parts[2]}`;
+    if (parts.length >= 2) return `${parts[0]}, ${parts[1]}`;
+    return parts[0] || "Location not available";
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -326,59 +371,149 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className={styles.reportsList}>
-              {feedIncidents.map((incident) => (
-                <Link
-                  href={`/incident/${incident.id}`}
-                  key={incident.id}
-                  className={styles.reportCard}
-                >
-                  <div className={styles.reportCardHeader}>
-                    <div className={styles.reportInfo}>
-                      <div
-                        className={styles.reportIconWrapper}
-                        style={{
-                          backgroundColor: `${incident.category?.color}20`,
-                        }}
-                      >
-                        <span style={{ color: incident.category?.color }}>
-                          {getCategoryIcon(incident.category?.icon ?? "")}
+              {feedIncidents.map((incident) => {
+                const statusInfo = getStatusInfo(incident.status);
+                const citizenMedia = incident.incident_media?.[0] || null;
+                const resolution = incident.incident_resolutions?.[0] || null;
+                const isResolved =
+                  incident.status === "resolved" && !!resolution;
+
+                return (
+                  <Link
+                    href={`/incident/${incident.id}`}
+                    key={incident.id}
+                    className={styles.feedCard}
+                  >
+                    <div className={styles.feedCardHeader}>
+                      <div className={styles.feedCardTopRow}>
+                        <h3 className={styles.feedCardTitle}>
+                          {incident.title}
+                        </h3>
+                        <span
+                          className={styles.feedStatusBadge}
+                          style={{
+                            backgroundColor: `${statusInfo.color}15`,
+                            color: statusInfo.color,
+                            borderColor: `${statusInfo.color}30`,
+                          }}
+                        >
+                          {statusInfo.label}
                         </span>
                       </div>
-                      <div>
-                        <h3 className={styles.reportTitle}>{incident.title}</h3>
-                        <p className={styles.reportId}>
-                          {incident.category?.name}
-                        </p>
+
+                      <div className={styles.feedCardMeta}>
+                        {incident.category && (
+                          <span
+                            className={`${styles.feedMetaItem} ${styles.feedCategoryBadge}`}
+                            style={{ color: incident.category.color }}
+                          >
+                            {incident.category.name}
+                          </span>
+                        )}
+                        <span className={styles.feedMetaItem}>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            width="14"
+                            height="14"
+                          >
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                          </svg>
+                          {parseLocation(incident.address)}
+                        </span>
+                        <span className={styles.feedMetaItem}>
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                            width="14"
+                            height="14"
+                          >
+                            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                          </svg>
+                          {formatDate(incident.created_at)}
+                        </span>
                       </div>
                     </div>
-                    <span
-                      className={`${styles.badge} ${getStatusBadgeClass(incident.status)}`}
-                    >
-                      {getStatusLabel(incident.status)}
-                    </span>
-                  </div>
 
-                  {incident.address && (
-                    <div className={styles.reportLocation}>
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        width="14"
-                        height="14"
-                      >
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                      </svg>
-                      <span>{incident.address}</span>
-                    </div>
-                  )}
+                    {(citizenMedia || isResolved) && (
+                      <div className={styles.feedMediaSection}>
+                        <div
+                          className={
+                            isResolved
+                              ? styles.feedMediaComparison
+                              : styles.feedMediaSingle
+                          }
+                        >
+                          {citizenMedia && (
+                            <div className={styles.feedMediaBlock}>
+                              <span className={styles.feedMediaLabel}>
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                  width="12"
+                                  height="12"
+                                >
+                                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                                </svg>
+                                Reported by Citizen
+                              </span>
+                              <div className={styles.feedMediaWrapper}>
+                                {citizenMedia.file_type === "video" ? (
+                                  <video
+                                    src={citizenMedia.file_url}
+                                    className={styles.feedMediaVideo}
+                                  />
+                                ) : (
+                                  <img
+                                    src={citizenMedia.file_url}
+                                    alt="Citizen report"
+                                    className={styles.feedMediaImage}
+                                    loading="lazy"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
 
-                  <div className={styles.reportFooter}>
-                    <span className={styles.reportTime}>
-                      {formatTimeAgo(incident.created_at)}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                          {isResolved && resolution && (
+                            <div className={styles.feedMediaBlock}>
+                              <span
+                                className={`${styles.feedMediaLabel} ${styles.feedPoliceLabel}`}
+                              >
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                  width="12"
+                                  height="12"
+                                >
+                                  <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                                </svg>
+                                Resolved by Police
+                              </span>
+                              <div className={styles.feedMediaWrapper}>
+                                {resolution.resolution_media_type ===
+                                "video" ? (
+                                  <video
+                                    src={resolution.resolution_media_url}
+                                    className={styles.feedMediaVideo}
+                                  />
+                                ) : (
+                                  <img
+                                    src={resolution.resolution_media_url}
+                                    alt="Police resolution"
+                                    className={styles.feedMediaImage}
+                                    loading="lazy"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </section>

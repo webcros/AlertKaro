@@ -498,3 +498,127 @@
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
 }
+
+/* Feed Cards (Public Feed section with images) */
+.feedCard {
+  background: white;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.feedCard:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.feedCardHeader {
+  padding: var(--spacing-md);
+  padding-bottom: 0;
+}
+
+.feedCardTopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+}
+
+.feedCardTitle {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  margin-right: var(--spacing-sm);
+}
+
+.feedStatusBadge {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  border: 1px solid;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.feedCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.feedMetaItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.feedCategoryBadge {
+  font-weight: 500;
+}
+
+/* Feed Media Section */
+.feedMediaSection {
+  padding: 0 var(--spacing-md) var(--spacing-md);
+}
+
+.feedMediaComparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+}
+
+.feedMediaSingle {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.feedMediaBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.feedMediaLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+}
+
+.feedPoliceLabel {
+  color: #388e3c;
+}
+
+.feedMediaWrapper {
+  position: relative;
+  aspect-ratio: 4/3;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--background-secondary);
+}
+
+.feedMediaImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.feedMediaVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
