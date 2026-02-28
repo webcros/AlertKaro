@@ -1,7 +1,7 @@
 .page {
   display: flex;
   min-height: 100vh;
-  background: #f8fafc;
+  background: var(--background);
 }
 
 .loading {
@@ -14,7 +14,7 @@
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e2e8f0;
+  border: 3px solid var(--border);
   border-top-color: #7c3aed;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -159,11 +159,11 @@
 .pageTitle {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 
 .pageSubtitle {
-  color: #64748b;
+  color: var(--text-secondary);
   margin-top: 0.25rem;
 }
 
@@ -176,20 +176,21 @@
 }
 
 .statCard {
-  background: white;
+  background: var(--surface);
   border-radius: 0.75rem;
   padding: 1.25rem;
   display: flex;
   align-items: center;
   gap: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
   text-decoration: none;
   color: inherit;
   transition: all 0.2s;
 }
 
 .statCard:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transform: translateY(-2px);
 }
 
@@ -207,12 +208,12 @@
   display: block;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 
 .statLabel {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 /* Content Grid */
@@ -224,16 +225,16 @@
 }
 
 .card {
-  background: white;
+  background: var(--surface);
   border-radius: 0.75rem;
   padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
 }
 
 .cardTitle {
   font-size: 1rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
   margin-bottom: 1rem;
 }
 
@@ -249,9 +250,9 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 0.5rem;
-  color: #1e293b;
+  color: var(--text-primary);
   text-decoration: none;
   font-size: 0.875rem;
   transition: all 0.2s;
@@ -259,22 +260,22 @@
 
 .actionButton:hover {
   border-color: #7c3aed;
-  background: #f5f3ff;
-  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
+  color: #a78bfa;
 }
 
 .actionButton svg {
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .actionButton:hover svg {
-  color: #7c3aed;
+  color: #a78bfa;
 }
 
 /* Activity */
 .noActivity {
   text-align: center;
-  color: #94a3b8;
+  color: var(--text-tertiary);
   padding: 2rem;
 }
 
@@ -294,7 +295,7 @@
 }
 
 .activityItem:hover {
-  background: #f8fafc;
+  background: var(--surface-elevated);
 }
 
 .activityIcon {
@@ -314,7 +315,7 @@
 
 .activityTitle {
   font-size: 0.875rem;
-  color: #1e293b;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -322,7 +323,7 @@
 
 .activityTime {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
 /* System Info */
@@ -330,9 +331,9 @@
   display: flex;
   gap: 2rem;
   padding: 1rem 1.5rem;
-  background: white;
+  background: var(--surface);
   border-radius: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
 }
 
 .infoItem {
@@ -343,13 +344,13 @@
 
 .infoLabel {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .infoValue {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 
 /* Mobile Header */

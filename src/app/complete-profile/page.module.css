@@ -16,7 +16,7 @@
     justify-content: center;
   }
   .container {
-    background: white;
+    background: var(--surface);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     max-width: 480px;
@@ -83,6 +83,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-md);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -99,7 +101,7 @@
 }
 
 .input:disabled {
-  background: var(--background-secondary);
+  background: var(--background-tertiary);
   cursor: not-allowed;
 }
 

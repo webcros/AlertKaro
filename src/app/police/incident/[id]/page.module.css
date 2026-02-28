@@ -1,7 +1,7 @@
 .page {
   display: flex;
   min-height: 100vh;
-  background: #f8fafc;
+  background: var(--police-surface);
 }
 
 .loading {
@@ -14,8 +14,8 @@
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #1e40af;
+  border: 3px solid var(--police-border);
+  border-top-color: var(--police-accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -91,14 +91,14 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: #64748b;
+  color: var(--police-text-secondary);
   text-decoration: none;
   font-size: 0.875rem;
   transition: color 0.2s;
 }
 
 .backLink:hover {
-  color: #1e293b;
+  color: var(--police-text-primary);
 }
 
 /* Content Grid */
@@ -117,16 +117,17 @@
 
 /* Cards */
 .card {
-  background: white;
+  background: var(--police-card);
   border-radius: 0.75rem;
   padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--police-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .cardTitle {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--police-text-secondary);
   margin-bottom: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -142,7 +143,7 @@
 
 .trackingId {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--police-text-muted);
   margin-bottom: 0.25rem;
   display: block;
 }
@@ -150,7 +151,7 @@
 .incidentTitle {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--police-text-primary);
 }
 
 .statusBadge {
@@ -161,7 +162,7 @@
 }
 
 .description {
-  color: #64748b;
+  color: var(--police-text-secondary);
   line-height: 1.6;
   margin-bottom: 1.5rem;
 }
@@ -174,20 +175,20 @@
 
 .metaItem {
   padding: 0.75rem;
-  background: #f8fafc;
+  background: var(--police-bg);
   border-radius: 0.5rem;
 }
 
 .metaLabel {
   display: block;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--police-text-muted);
   margin-bottom: 0.25rem;
 }
 
 .metaValue {
   font-weight: 500;
-  color: #1e293b;
+  color: var(--police-text-primary);
 }
 
 /* Location */
@@ -199,7 +200,7 @@
 }
 
 .locationInfo span {
-  color: #64748b;
+  color: var(--police-text-secondary);
   line-height: 1.5;
 }
 
@@ -229,7 +230,7 @@
   aspect-ratio: 4/3;
   border-radius: 0.5rem;
   overflow: hidden;
-  background: #f1f5f9;
+  background: var(--police-bg);
 }
 
 .mediaContent {
@@ -267,24 +268,24 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #e2e8f0;
+  background: var(--police-bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  color: #64748b;
+  color: var(--police-text-secondary);
   font-size: 1.25rem;
 }
 
 .reporterName {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--police-text-primary);
   margin-bottom: 0.25rem;
 }
 
 .reporterContact {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--police-text-secondary);
 }
 
 .callButton {
@@ -293,15 +294,15 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: #dcfce7;
-  color: #166534;
+  background: var(--status-resolved-bg);
+  color: var(--status-resolved);
   border-radius: 0.5rem;
   font-weight: 500;
   text-decoration: none;
 }
 
 .callButton:hover {
-  background: #bbf7d0;
+  background: rgba(16, 185, 129, 0.2);
 }
 
 /* Update Button */
@@ -321,7 +322,7 @@
 
 /* Timeline */
 .noUpdates {
-  color: #94a3b8;
+  color: var(--police-text-muted);
   text-align: center;
   padding: 1rem;
 }
@@ -347,7 +348,7 @@
   top: 4px;
   width: 10px;
   height: 10px;
-  background: #3b82f6;
+  background: var(--police-accent-light);
   border-radius: 50%;
 }
 
@@ -357,7 +358,7 @@
   top: 18px;
   bottom: 0;
   width: 2px;
-  background: #e2e8f0;
+  background: var(--police-border);
 }
 
 .timelineStatus {
@@ -367,7 +368,7 @@
 
 .timelineNotes {
   font-size: 0.875rem;
-  color: #64748b;
+  color: var(--police-text-secondary);
   margin: 0.25rem 0;
 }
 
@@ -375,7 +376,7 @@
   display: flex;
   gap: 0.5rem;
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--police-text-muted);
 }
 
 .timelineMeta span:first-child::after {
@@ -395,18 +396,20 @@
 }
 
 .modal {
-  background: white;
+  background: var(--police-card);
   border-radius: 0.75rem;
   padding: 1.5rem;
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--police-border);
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.4);
 }
 
 .modalTitle {
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
+  color: var(--police-text-primary);
 }
 
 .formGroup {
@@ -417,7 +420,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--police-text-secondary);
   margin-bottom: 0.5rem;
 }
 
@@ -425,15 +428,17 @@
 .textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--police-border);
   border-radius: 0.5rem;
   font-size: 0.875rem;
+  background: var(--police-bg);
+  color: var(--police-text-primary);
 }
 
 .select:focus,
 .textarea:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--police-accent-light);
 }
 
 .textarea {
@@ -455,12 +460,12 @@
 }
 
 .cancelButton {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--police-bg);
+  color: var(--police-text-secondary);
 }
 
 .saveButton {
-  background: #3b82f6;
+  background: var(--police-accent-light);
   color: white;
 }
 
@@ -478,7 +483,7 @@
   display: block;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #64748b;
+  color: var(--police-text-secondary);
   margin-bottom: 0.5rem;
 }
 
@@ -489,18 +494,18 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 1.5rem;
-  border: 2px dashed #e2e8f0;
+  border: 2px dashed var(--police-border);
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
-  color: #94a3b8;
+  color: var(--police-text-muted);
   text-align: center;
 }
 
 .uploadDropzone:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  background: #f0f7ff;
+  border-color: var(--police-accent-light);
+  color: var(--police-accent-light);
+  background: var(--police-accent-bg);
 }
 
 .uploadDropzone svg {
@@ -556,7 +561,7 @@
 .resolutionTitle {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--police-text-secondary);
   margin-bottom: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -565,7 +570,7 @@
 .resolutionMedia {
   border-radius: 0.5rem;
   overflow: hidden;
-  background: #f1f5f9;
+  background: var(--police-bg);
 }
 
 .resolutionMediaContent {

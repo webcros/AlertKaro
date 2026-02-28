@@ -205,59 +205,42 @@ export default function FeedPage() {
                   key={incident.id}
                   className={styles.feedCard}
                 >
-                  {/* Card Header */}
-                  <div className={styles.cardHeader}>
-                    <div className={styles.cardTopRow}>
-                      <h3 className={styles.cardTitle}>{incident.title}</h3>
-                      <span
-                        className={styles.statusBadge}
-                        style={{
-                          backgroundColor: `${statusInfo.color}15`,
-                          color: statusInfo.color,
-                          borderColor: `${statusInfo.color}30`,
-                        }}
+                  {/* Card Top Bar */}
+                  <div className={styles.cardTopBar}>
+                    <span
+                      className={styles.cardCategoryBadge}
+                      style={{
+                        backgroundColor: `${statusInfo.color}18`,
+                        color: statusInfo.color,
+                        borderColor: `${statusInfo.color}35`,
+                      }}
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        width="11"
+                        height="11"
                       >
-                        {statusInfo.label}
-                      </span>
-                    </div>
-
-                    <div className={styles.cardMeta}>
-                      {incident.category && (
-                        <span
-                          className={`${styles.metaItem} ${styles.categoryBadge}`}
-                          style={{ color: incident.category.color }}
-                        >
-                          {incident.category.name}
-                        </span>
-                      )}
-                      <span className={styles.metaItem}>
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          width="14"
-                          height="14"
-                        >
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        {parseLocation(incident.address)}
-                      </span>
-                      <span className={styles.metaItem}>
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          width="14"
-                          height="14"
-                        >
-                          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
-                        </svg>
-                        {formatDate(incident.created_at)}
-                      </span>
-                    </div>
+                        {incident.status === "resolved" ? (
+                          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                        ) : (
+                          <circle cx="12" cy="12" r="5" />
+                        )}
+                      </svg>
+                      {incident.category?.name || "General"} &middot;{" "}
+                      {statusInfo.label}
+                    </span>
                   </div>
 
-                  {/* Media Section */}
+                  {/* Before / After Media */}
                   {(citizenMedia || resolution) && (
                     <div className={styles.mediaSection}>
+                      {isResolved && citizenMedia && (
+                        <div className={styles.comparisonLabels}>
+                          <span className={styles.labelBefore}>Before</span>
+                          <span className={styles.labelAfter}>After</span>
+                        </div>
+                      )}
                       <div
                         className={
                           isResolved
@@ -265,27 +248,12 @@ export default function FeedPage() {
                             : styles.mediaSingle
                         }
                       >
-                        {/* Citizen Media */}
                         {citizenMedia && (
                           <div className={styles.mediaBlock}>
-                            <span
-                              className={`${styles.mediaLabel} ${styles.citizenLabel}`}
-                            >
-                              <svg
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                                width="12"
-                                height="12"
-                              >
-                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                              </svg>
-                              Reported by Citizen
-                            </span>
                             <div className={styles.mediaWrapper}>
                               {citizenMedia.file_type === "video" ? (
                                 <video
                                   src={citizenMedia.file_url}
-                                  controls
                                   className={styles.mediaVideo}
                                 />
                               ) : (
@@ -300,27 +268,12 @@ export default function FeedPage() {
                           </div>
                         )}
 
-                        {/* Resolution Media */}
                         {isResolved && resolution && (
                           <div className={styles.mediaBlock}>
-                            <span
-                              className={`${styles.mediaLabel} ${styles.policeLabel}`}
-                            >
-                              <svg
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                                width="12"
-                                height="12"
-                              >
-                                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
-                              </svg>
-                              Resolved by Police
-                            </span>
                             <div className={styles.mediaWrapper}>
                               {resolution.resolution_media_type === "video" ? (
                                 <video
                                   src={resolution.resolution_media_url}
-                                  controls
                                   className={styles.mediaVideo}
                                 />
                               ) : (
@@ -335,6 +288,60 @@ export default function FeedPage() {
                           </div>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Card Body */}
+                  <div className={styles.cardBody}>
+                    <h3 className={styles.cardTitle}>{incident.title}</h3>
+
+                    <div className={styles.cardMeta}>
+                      <span className={styles.metaItem}>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          width="13"
+                          height="13"
+                        >
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                        </svg>
+                        {parseLocation(incident.address)}
+                      </span>
+                      <span className={styles.metaItem}>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          width="13"
+                          height="13"
+                        >
+                          <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+                        </svg>
+                        {formatDate(incident.created_at)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Resolved Footer */}
+                  {isResolved && (
+                    <div className={styles.resolvedFooter}>
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        width="14"
+                        height="14"
+                      >
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" />
+                      </svg>
+                      <span>Incident Resolved</span>
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        width="16"
+                        height="16"
+                        className={styles.resolvedArrow}
+                      >
+                        <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z" />
+                      </svg>
                     </div>
                   )}
                 </Link>

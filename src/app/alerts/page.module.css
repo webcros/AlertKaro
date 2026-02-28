@@ -13,7 +13,7 @@
   justify-content: space-between;
   padding: var(--spacing-md) var(--spacing-md);
   padding-top: calc(var(--spacing-lg) + env(safe-area-inset-top, 0px));
-  background: white;
+  background: var(--surface);
   border-bottom: 1px solid var(--border-light);
   position: sticky;
   top: 0;
@@ -165,7 +165,7 @@
   align-items: flex-start;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   text-align: left;
@@ -176,16 +176,12 @@
 
 .notificationCard:hover {
   border-color: var(--border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .notificationCard.unread {
-  background: linear-gradient(
-    135deg,
-    rgba(25, 118, 210, 0.03),
-    rgba(211, 47, 47, 0.03)
-  );
-  border-color: rgba(25, 118, 210, 0.2);
+  background: rgba(79, 156, 247, 0.05);
+  border-color: rgba(79, 156, 247, 0.2);
 }
 
 .notificationCard.unread::before {

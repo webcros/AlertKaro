@@ -21,7 +21,7 @@
     justify-content: center;
   }
   .container {
-    background: white;
+    background: var(--surface);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     max-width: 440px;
@@ -95,7 +95,7 @@
   width: 100%;
   max-width: 320px;
   padding: var(--spacing-md) var(--spacing-lg);
-  background: white;
+  background: var(--surface-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   font-size: var(--font-size-md);
@@ -106,7 +106,7 @@
 }
 
 .googleButton:hover {
-  background: var(--background-secondary);
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
 

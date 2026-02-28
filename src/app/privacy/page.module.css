@@ -74,7 +74,7 @@
 
 /* Card */
 .card {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   overflow: hidden;
 }

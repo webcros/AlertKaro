@@ -1,6 +1,6 @@
 /* Skeleton Primitives */
 .skeleton {
-  background: linear-gradient(90deg, #e8e8e8 0%, #f5f5f5 50%, #e8e8e8 100%);
+  background: linear-gradient(90deg, #1c1c24 0%, #252530 50%, #1c1c24 100%);
   background-size: 200% 100%;
   border-radius: var(--radius-sm);
   animation: shimmer 1.5s ease-in-out infinite;
@@ -102,7 +102,7 @@
 .dashboardFeedSkeleton {
   border-radius: var(--radius-md);
   height: 60px;
-  background: white;
+  background: var(--surface);
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-md);
   display: flex;
@@ -118,7 +118,7 @@
 }
 
 .dashboardReportCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   border: 1px solid var(--border-light);
@@ -142,14 +142,14 @@
 .historyHeader {
   padding: var(--spacing-lg);
   padding-top: calc(var(--spacing-lg) + env(safe-area-inset-top, 0px));
-  background: white;
+  background: var(--surface);
 }
 
 .historyFilterTabs {
   display: flex;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  background: white;
+  background: var(--surface);
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -160,7 +160,7 @@
 }
 
 .historyCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
@@ -186,7 +186,7 @@
   justify-content: space-between;
   padding: var(--spacing-md);
   padding-top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
-  background: white;
+  background: var(--surface);
   border-bottom: 1px solid var(--border-light);
   position: sticky;
   top: 0;
@@ -204,7 +204,7 @@
 .alertCard {
   display: flex;
   gap: var(--spacing-md);
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
@@ -269,7 +269,7 @@
 }
 
 .profileInfoCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -305,7 +305,7 @@
   justify-content: space-between;
   padding: var(--spacing-md);
   padding-top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
-  background: white;
+  background: var(--surface);
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -316,7 +316,7 @@
 }
 
 .incidentTrackingCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   display: flex;
@@ -326,7 +326,7 @@
 }
 
 .incidentProgressSection {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
@@ -343,7 +343,7 @@
 }
 
 .incidentDetailCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
 }

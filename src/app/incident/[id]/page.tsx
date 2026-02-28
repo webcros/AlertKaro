@@ -41,6 +41,14 @@ interface Update {
   };
 }
 
+interface Resolution {
+  id: string;
+  resolution_media_url: string;
+  resolution_media_type: string;
+  notes: string | null;
+  created_at: string;
+}
+
 export default function IncidentDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -53,6 +61,7 @@ export default function IncidentDetailPage() {
   const [incident, setIncident] = useState<Incident | null>(null);
   const [media, setMedia] = useState<Media[]>([]);
   const [updates, setUpdates] = useState<Update[]>([]);
+  const [resolution, setResolution] = useState<Resolution | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(isNew);
 
@@ -102,6 +111,19 @@ export default function IncidentDetailPage() {
 
         if (updatesData) {
           setUpdates(updatesData as unknown as Update[]);
+        }
+
+        // Load resolution (police action)
+        const { data: resolutionData } = await supabase
+          .from("incident_resolutions")
+          .select("*")
+          .eq("incident_id", incidentId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (resolutionData) {
+          setResolution(resolutionData as Resolution);
         }
       } catch (error) {
         console.error("Error loading incident:", error);
@@ -236,6 +258,44 @@ export default function IncidentDetailPage() {
           </div>
         </div>
 
+        {/* Incident Summary */}
+        <div className={styles.incidentSummary}>
+          <h2 className={styles.incidentTitle}>{incident.title}</h2>
+          <div className={styles.incidentMeta}>
+            <span
+              className={styles.incidentCategory}
+              style={{ color: incident.category?.color }}
+            >
+              {incident.category?.name}
+            </span>
+            {incident.address && (
+              <span className={styles.incidentLocation}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  width="14"
+                  height="14"
+                >
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                {incident.address}
+              </span>
+            )}
+          </div>
+          <div className={styles.incidentDateRow}>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" />
+            </svg>
+            <span>{formatDate(incident.created_at)}</span>
+          </div>
+          <div className={styles.reportedByRow}>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+            </svg>
+            <span>REPORTED BY CITIZEN</span>
+          </div>
+        </div>
+
         {/* Media Gallery */}
         {media.length > 0 && (
           <div className={styles.section}>
@@ -317,6 +377,74 @@ export default function IncidentDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Police Action / Resolution */}
+        {resolution && (
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="20"
+                height="20"
+                style={{ verticalAlign: "middle", marginRight: 8 }}
+              >
+                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+              </svg>
+              Police Action
+            </h2>
+            <div className={styles.policeActionCard}>
+              {resolution.resolution_media_url && (
+                <div className={styles.resolutionMedia}>
+                  {resolution.resolution_media_type === "video" ? (
+                    <video
+                      src={resolution.resolution_media_url}
+                      controls
+                      className={styles.resolutionMediaContent}
+                    />
+                  ) : (
+                    <img
+                      src={resolution.resolution_media_url}
+                      alt="Resolution evidence"
+                      className={styles.resolutionMediaContent}
+                    />
+                  )}
+                  <span className={styles.resolutionMediaLabel}>
+                    After — Resolved
+                  </span>
+                </div>
+              )}
+              {resolution.notes && (
+                <div className={styles.resolutionNotes}>
+                  <span className={styles.resolutionNotesLabel}>
+                    Resolution Notes
+                  </span>
+                  <p className={styles.resolutionNotesText}>
+                    {resolution.notes}
+                  </p>
+                </div>
+              )}
+              <div className={styles.resolutionFooter}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  width="16"
+                  height="16"
+                >
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                </svg>
+                <span>
+                  Resolved on{" "}
+                  {new Date(resolution.created_at).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Updates Timeline */}
         {updates.length > 0 && (

@@ -142,7 +142,7 @@
 
 /* Info Card */
 .infoCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -182,7 +182,7 @@
 
 /* Menu Card */
 .menuCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -219,7 +219,7 @@
   gap: var(--spacing-sm);
   width: 100%;
   padding: var(--spacing-md);
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   color: var(--primary);
   font-size: var(--font-size-md);

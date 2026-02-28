@@ -1,7 +1,7 @@
 .page {
   display: flex;
   min-height: 100vh;
-  background: #f8fafc;
+  background: var(--background);
 }
 
 .loading {
@@ -14,7 +14,7 @@
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid #e2e8f0;
+  border: 3px solid var(--border);
   border-top-color: #7c3aed;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -99,40 +99,42 @@
 .pageTitle {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-primary);
 }
 
 .pageSubtitle {
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .filterSelect {
   padding: 0.5rem 1rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 0.5rem;
-  background: white;
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .emptyState {
   text-align: center;
   padding: 4rem;
-  background: white;
+  background: var(--surface);
   border-radius: 0.75rem;
+  border: 1px solid var(--border);
 }
 
 .emptyState svg {
-  color: #94a3b8;
+  color: var(--text-tertiary);
   margin-bottom: 1rem;
 }
 
 .emptyState p {
   font-weight: 500;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .emptyState span {
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
 .logsList {
@@ -145,9 +147,9 @@
   display: flex;
   gap: 1rem;
   padding: 1rem;
-  background: white;
+  background: var(--surface);
   border-radius: 0.5rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border);
 }
 
 .logIcon {
@@ -176,23 +178,23 @@
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .logTime {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
 .logDescription {
   font-size: 0.875rem;
-  color: #1e293b;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 
 .logUser {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-tertiary);
 }
 
 @media (max-width: 768px) {

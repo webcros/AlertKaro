@@ -12,7 +12,7 @@
   justify-content: space-between;
   padding: var(--spacing-md);
   padding-top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
-  background: white;
+  background: var(--surface);
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -121,7 +121,7 @@
   justify-content: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-md) var(--spacing-lg);
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-md);
@@ -131,7 +131,7 @@
 }
 
 .captureOption:hover {
-  background: var(--background-secondary);
+  background: var(--surface-elevated);
   border-color: var(--primary);
   color: var(--primary);
 }
@@ -293,10 +293,10 @@
   bottom: calc(100% + 8px);
   left: 0;
   z-index: 20;
-  background: white;
+  background: var(--surface-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   min-width: 160px;
   animation: menuPop 0.15s ease-out;
@@ -328,7 +328,7 @@
 }
 
 .addMenuItem:hover {
-  background: var(--background-secondary);
+  background: var(--surface);
   color: var(--primary);
 }
 
@@ -362,7 +362,7 @@
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-lg) var(--spacing-md);
-  background: white;
+  background: var(--surface);
   border: 2px solid var(--border);
   border-radius: var(--radius-lg);
   transition: all 0.2s ease;
@@ -370,7 +370,7 @@
   font-weight: 500;
   text-align: center;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   color: var(--text-secondary);
 }
 
@@ -378,8 +378,8 @@
   border-color: var(--category-color, var(--primary));
   background: color-mix(
     in srgb,
-    var(--category-color, var(--primary)) 6%,
-    white
+    var(--category-color, var(--primary)) 10%,
+    var(--surface)
   );
   box-shadow: 0 4px 12px
     color-mix(in srgb, var(--category-color, var(--primary)) 20%, transparent);
@@ -392,8 +392,8 @@
   border-width: 2.5px;
   background: color-mix(
     in srgb,
-    var(--category-color, var(--primary)) 10%,
-    white
+    var(--category-color, var(--primary)) 15%,
+    var(--surface)
   );
   box-shadow: 0 4px 16px
     color-mix(in srgb, var(--category-color, var(--primary)) 28%, transparent);
@@ -411,8 +411,8 @@
   border-radius: 50%;
   background: color-mix(
     in srgb,
-    var(--category-color, var(--primary)) 12%,
-    white
+    var(--category-color, var(--primary)) 15%,
+    var(--surface)
   );
   color: var(--category-color, var(--primary));
   transition: all 0.2s ease;
@@ -421,8 +421,8 @@
 .categoryCard.categorySelected .categoryIconWrapper {
   background: color-mix(
     in srgb,
-    var(--category-color, var(--primary)) 20%,
-    white
+    var(--category-color, var(--primary)) 25%,
+    var(--surface)
   );
 }
 
@@ -438,6 +438,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-md);
+  background: var(--surface);
+  color: var(--text-primary);
   transition: border-color var(--transition-fast);
   outline: none;
 }
@@ -455,6 +457,8 @@
   resize: vertical;
   min-height: 80px;
   outline: none;
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .textarea:focus {
@@ -662,7 +666,8 @@
   font-size: var(--font-size-md);
   outline: none;
   transition: border-color var(--transition-fast);
-  background: white;
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .manualAddressInput:focus {
@@ -687,12 +692,12 @@
   color: var(--text-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: white;
+  background: var(--surface);
   transition: all var(--transition-fast);
 }
 
 .manualCancelButton:hover {
-  background: var(--background-secondary);
+  background: var(--surface-elevated);
   color: var(--text-primary);
 }
 
@@ -825,7 +830,7 @@
 .submitSection {
   padding: var(--spacing-md);
   padding-bottom: calc(var(--spacing-md) + env(safe-area-inset-bottom, 0px));
-  background: white;
+  background: var(--surface);
   border-top: 1px solid var(--border-light);
 }
 

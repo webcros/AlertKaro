@@ -65,7 +65,7 @@
   justify-content: space-between;
   padding: var(--spacing-md);
   padding-top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
-  background: white;
+  background: var(--surface);
   border-bottom: 1px solid var(--border-light);
 }
 
@@ -132,7 +132,7 @@
 
 /* Tracking Card */
 .trackingCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   display: flex;
@@ -164,7 +164,7 @@
 
 /* Progress Section */
 .progressSection {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-md);
@@ -194,6 +194,77 @@
 .progressSteps .activeStep {
   color: var(--text-primary);
   font-weight: 500;
+}
+
+/* Incident Summary */
+.incidentSummary {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.incidentTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-sm) 0;
+  line-height: 1.3;
+}
+
+.incidentMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+}
+
+.incidentCategory {
+  font-weight: 600;
+}
+
+.incidentLocation {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+}
+
+.incidentLocation svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.incidentDateRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.incidentDateRow svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.reportedByRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: #d32f2f;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-top: var(--spacing-xs);
+}
+
+.reportedByRow svg {
+  flex-shrink: 0;
 }
 
 /* Section */
@@ -230,7 +301,7 @@
 
 /* Detail Card */
 .detailCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
 }
@@ -263,7 +334,7 @@
 
 /* Location Card */
 .locationCard {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
   display: flex;
@@ -282,9 +353,77 @@
 
 /* Timeline */
 .timeline {
-  background: white;
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
+}
+
+/* Police Action Card */
+.policeActionCard {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid rgba(46, 125, 50, 0.2);
+}
+
+.resolutionMedia {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--background-secondary);
+}
+
+.resolutionMediaContent {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.resolutionMediaLabel {
+  position: absolute;
+  bottom: var(--spacing-sm);
+  left: var(--spacing-sm);
+  background: rgba(56, 142, 60, 0.9);
+  color: white;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+}
+
+.resolutionNotes {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.resolutionNotesLabel {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  display: block;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.resolutionNotesText {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.resolutionFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: rgba(46, 125, 50, 0.15);
+  color: #66bb6a;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
 }
 
 .timelineItem {
