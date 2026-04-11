@@ -41,6 +41,18 @@ export default function MaintenancePage() {
           <div className={styles.progressBar}></div>
         </div>
       </div>
+
+      <div className={styles.footer}>
+        For further information contact{" "}
+        <a
+          href="https://www.talaganarajesh.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.link}
+        >
+          talaganarajesh.in
+        </a>
+      </div>
     </div>
   );
 }

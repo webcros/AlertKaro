@@ -191,3 +191,27 @@
     opacity: 0;
   }
 }
+
+.footer {
+  position: absolute;
+  bottom: 2rem;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+  z-index: 10;
+}
+
+.link {
+  color: #a1a1aa;
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.link:hover {
+  color: #ffffff;
+  border-bottom-color: #ffffff;
+}
