@@ -4,6 +4,10 @@
   display: none;
 }
 
+.themeBtn {
+  display: none;
+}
+
 .cameraLabel {
   display: none;
 }
@@ -102,6 +106,7 @@
   .brandArea {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: var(--spacing-sm) var(--spacing-md);
     margin-bottom: var(--spacing-lg);
   }
@@ -111,6 +116,24 @@
     font-weight: 800;
     color: var(--primary);
     letter-spacing: -0.5px;
+  }
+
+  .themeBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: background 0.2s ease;
+  }
+
+  .themeBtn:hover {
+    background: var(--border);
   }
 
   .cameraLabel {

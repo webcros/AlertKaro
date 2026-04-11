@@ -120,6 +120,54 @@
   --sidebar-width: 260px;
 }
 
+/* ========== Police Light Theme Override ========== */
+[data-theme="light"] {
+  --police-bg-dark: #e2e8f0;
+  --police-bg: #f1f5f9;
+  --police-bg-secondary: #f8fafc;
+  --police-surface: #f8fafc;
+  --police-card: #ffffff;
+
+  --police-border: #e2e8f0;
+  --police-border-dark: #cbd5e1;
+  --police-border-light: #f1f5f9;
+
+  --police-text-primary: #1e293b;
+  --police-text-secondary: #64748b;
+  --police-text-muted: #94a3b8;
+  --police-text-light: #334155;
+  --police-text-light-muted: #64748b;
+
+  --police-accent-bg: rgba(37, 99, 235, 0.08);
+
+  --status-pending-bg: rgba(239, 68, 68, 0.08);
+  --status-pending-border: rgba(239, 68, 68, 0.2);
+  --status-in-progress-bg: rgba(245, 158, 11, 0.08);
+  --status-in-progress-border: rgba(245, 158, 11, 0.2);
+  --status-in-review-bg: rgba(59, 130, 246, 0.08);
+  --status-in-review-border: rgba(59, 130, 246, 0.2);
+  --status-resolved-bg: rgba(16, 185, 129, 0.08);
+  --status-resolved-border: rgba(16, 185, 129, 0.2);
+
+  --priority-urgent-bg: rgba(239, 68, 68, 0.08);
+  --priority-high-bg: rgba(249, 115, 22, 0.08);
+  --priority-normal: #94a3b8;
+  --priority-normal-bg: rgba(148, 163, 184, 0.08);
+
+  --success-bg: rgba(16, 185, 129, 0.08);
+  --warning-bg: rgba(245, 158, 11, 0.08);
+  --error-bg: rgba(239, 68, 68, 0.08);
+  --info-bg: rgba(14, 165, 233, 0.08);
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
+}
+
 /* ============================================
    Status Badges
    ============================================ */

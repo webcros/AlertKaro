@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useNotifications } from "@/lib/NotificationContext";
+import { useTheme } from "@/lib/ThemeContext";
 import styles from "./BottomNav.module.css";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { unreadCount } = useNotifications();
+  const { theme, toggleTheme } = useTheme();
 
   const isActive = (path: string) => {
     if (path === "/dashboard") return pathname === "/dashboard";
@@ -18,6 +20,14 @@ export default function BottomNav() {
     <nav className={styles.bottomNav}>
       <div className={styles.brandArea}>
         <span className={styles.brandName}>AlertKaro</span>
+        <button
+          className={styles.themeBtn}
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+        >
+          {theme === "dark" ? "☀️" : "🌙"}
+        </button>
       </div>
       <Link
         href="/dashboard"

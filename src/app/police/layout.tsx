@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import ThemeToggle from "@/components/ThemeToggle";
 import styles from "./page.module.css";
 
 interface Profile {
@@ -153,24 +154,34 @@ export default function PoliceLayout({
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <div className={styles.userInfo}>
-            <div className={styles.userAvatar}>
-              {profile?.full_name?.charAt(0)}
-            </div>
-            <div>
-              <p className={styles.userName}>{profile?.full_name}</p>
-              <p className={styles.userRole}>{profile?.role}</p>
-            </div>
+          <div className={styles.themeToggleRow}>
+            <ThemeToggle showLabel compact />
           </div>
-          <button
-            onClick={handleSignOut}
-            className={styles.signOutBtn}
-            title="Sign out"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
-            </svg>
-          </button>
+          <div className={styles.footerUserRow}>
+            <div className={styles.userInfo}>
+              <div className={styles.userAvatar}>
+                {profile?.full_name?.charAt(0)}
+              </div>
+              <div>
+                <p className={styles.userName}>{profile?.full_name}</p>
+                <p className={styles.userRole}>{profile?.role}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className={styles.signOutBtn}
+              title="Sign out"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                width="20"
+                height="20"
+              >
+                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </aside>
 

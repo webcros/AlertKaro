@@ -18,6 +18,22 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* Light theme overrides */
+:global([data-theme="light"]) .skeleton {
+  background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+  background-size: 200% 100%;
+}
+
+:global([data-theme="light"]) .skeletonLight {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.7) 50%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  background-size: 200% 100%;
+}
+
 @keyframes shimmer {
   0% {
     background-position: 200% 0;

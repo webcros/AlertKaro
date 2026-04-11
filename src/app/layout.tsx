@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./police/police-design-system.css";
 import { NotificationProvider } from "@/lib/NotificationContext";
+import { ThemeProvider } from "@/lib/ThemeContext";
 
 export const metadata: Metadata = {
   title: "AlertKaro - Report. Track. Resolve.",
@@ -58,7 +59,9 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning>
-        <NotificationProvider>{children}</NotificationProvider>
+        <ThemeProvider>
+          <NotificationProvider>{children}</NotificationProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

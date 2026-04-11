@@ -100,10 +100,23 @@
 
 .sidebarFooter {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.75rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.themeToggleRow {
+  display: flex;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.footerUserRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .userInfo {
